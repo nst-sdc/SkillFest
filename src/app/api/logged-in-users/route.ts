@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
-import { authOptions } from "../auth/[...nextauth]/route";
+import { authOptions } from "../auth/auth-options";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -18,7 +18,8 @@ export async function GET() {
     ];
 
     return NextResponse.json(loggedInUsers);
-  } catch (error) {
+  } catch (error: unknown) {
+    console.error('Error fetching users:', error);
     return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
   }
 }

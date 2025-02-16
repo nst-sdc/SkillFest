@@ -15,6 +15,10 @@ type Contributor = {
   hasLoggedIn?: boolean;
 };
 
+type LoggedInUser = {
+  login: string;
+};
+
 export default function Leaderboard() {
   const { data: session } = useSession();
   const [contributors, setContributors] = useState<Contributor[]>([]);
@@ -32,7 +36,7 @@ export default function Leaderboard() {
       // First, fetch logged-in users from your database/API
       const loggedInUsersResponse = await fetch('/api/logged-in-users');
       const loggedInUsers = await loggedInUsersResponse.json();
-      const loggedInUsernames = new Set(loggedInUsers.map((user: any) => user.login));
+      const loggedInUsernames = new Set(loggedInUsers.map((user: LoggedInUser) => user.login));
 
       const reposResponse = await fetch('https://api.github.com/orgs/nst-sdc/repos', {
         headers: {
