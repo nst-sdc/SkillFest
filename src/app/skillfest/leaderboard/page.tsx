@@ -38,6 +38,23 @@ export default function Leaderboard() {
       const loggedInUsers = await loggedInUsersResponse.json();
       const loggedInUsernames = new Set(loggedInUsers.map((user: LoggedInUser) => user.login?.toLowerCase()));
 
+      // Fetch organization members
+      const orgMembersResponse = await fetch('https://api.github.com/orgs/nst-sdc/members', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github.v3+json',
+        },
+      });
+
+      if (!orgMembersResponse.ok) {
+        throw new Error(`GitHub API error: ${orgMembersResponse.status}`);
+      }
+
+      const orgMembers = await orgMembersResponse.json();
+      const orgMemberUsernames = new Set(orgMembers.map((member: { login: string }) => 
+        member.login.toLowerCase()
+      ));
+
       const reposResponse = await fetch('https://api.github.com/orgs/nst-sdc/repos', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -69,30 +86,27 @@ export default function Leaderboard() {
       const contributorMap = new Map<string, Contributor>();
       
       allContributors.flat().forEach((contributor: Contributor) => {
-        const login = contributor.login.toLowerCase(); // Normalize usernames
-        if (contributorMap.has(login)) {
-          const existing = contributorMap.get(login)!;
-          existing.contributions += contributor.contributions;
-        } else {
-          contributorMap.set(login, {
-            login: contributor.login,
-            avatar_url: contributor.avatar_url,
-            contributions: contributor.contributions,
-            html_url: contributor.html_url,
-            hasLoggedIn: loggedInUsernames.has(login)
-          });
+        const login = contributor.login.toLowerCase();
+        // Only include contributors who are org members
+        if (orgMemberUsernames.has(login)) {
+          if (contributorMap.has(login)) {
+            const existing = contributorMap.get(login)!;
+            existing.contributions += contributor.contributions;
+          } else {
+            contributorMap.set(login, {
+              login: contributor.login,
+              avatar_url: contributor.avatar_url,
+              contributions: contributor.contributions,
+              html_url: contributor.html_url,
+              hasLoggedIn: loggedInUsernames.has(login)
+            });
+          }
         }
       });
 
-      // Show all contributors but sort logged-in users first
+      // Sort contributors by contributions
       const sortedContributors = Array.from(contributorMap.values())
-        .sort((a, b) => {
-          // First sort by logged-in status
-          if (a.hasLoggedIn && !b.hasLoggedIn) return -1;
-          if (!a.hasLoggedIn && b.hasLoggedIn) return 1;
-          // Then sort by contributions
-          return b.contributions - a.contributions;
-        })
+        .sort((a, b) => b.contributions - a.contributions)
         .map((contributor, index) => ({
           ...contributor,
           rank: index + 1

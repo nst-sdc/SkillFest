@@ -10,11 +10,22 @@ export async function GET() {
   }
 
   try {
-    // Here you would fetch from your database
-    // For now, we'll return a mock list
+    // Fetch the user's GitHub profile to get their username
+    const githubResponse = await fetch('https://api.github.com/user', {
+      headers: {
+        'Authorization': `Bearer ${session.accessToken}`,
+        'Accept': 'application/vnd.github.v3+json',
+      },
+    });
+
+    if (!githubResponse.ok) {
+      throw new Error('Failed to fetch GitHub profile');
+    }
+
+    const githubUser = await githubResponse.json();
+    
     const loggedInUsers = [
-      // Using GitHub login instead of display name
-      { login: session.user?.email?.split('@')[0] || session.user?.name }
+      { login: githubUser.login }
     ];
 
     return NextResponse.json(loggedInUsers);
