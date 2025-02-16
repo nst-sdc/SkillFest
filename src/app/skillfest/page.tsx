@@ -217,7 +217,7 @@ export default function SkillFest() {
               <Terminal className="w-10 h-10 text-white" />
             </div>
             <h1 className="text-5xl font-bold mb-6 text-foreground bg-gradient-to-r from-[#238636] to-[#2ea043] text-transparent bg-clip-text">
-              Welcome to SkillFest 2024
+              Welcome to SkillFest 2025
             </h1>
             <p className="text-xl text-[#8b949e] max-w-2xl mx-auto">
               Showcase your skills, contribute to open source, and join our development team
@@ -387,11 +387,11 @@ export default function SkillFest() {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-[#8b949e]">Started</span>
-                  <span className="text-white">Mar 15, 2024</span>
+                  <span className="text-white">Feb, 2025</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[#8b949e]">Deadline</span>
-                  <span className="text-white">Apr 15, 2024</span>
+                  <span className="text-white">March 1, 2025</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[#8b949e]">Days Left</span>
@@ -550,7 +550,7 @@ function SignInPrompt() {
     <div className="text-center">
       <div className="max-w-sm mx-auto p-8 rounded-lg border border-[#30363d] bg-[#161b22] backdrop-blur-sm">
         <Github className="w-16 h-16 text-[#8b949e] mx-auto mb-6" />
-        <h3 className="text-xl font-bold text-white mb-4">Join SkillFest 2024</h3>
+        <h3 className="text-xl font-bold text-white mb-4">Join SkillFest 2025</h3>
         <p className="text-[#8b949e] mb-6">
           Sign in with GitHub to start your journey and track your progress
         </p>
