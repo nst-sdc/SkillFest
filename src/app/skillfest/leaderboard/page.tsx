@@ -12,6 +12,7 @@ type Contributor = {
   contributions: number;
   html_url: string;
   rank?: number;
+  hasLoggedIn?: boolean;
 };
 
 export default function Leaderboard() {
@@ -28,6 +29,11 @@ export default function Leaderboard() {
   const fetchContributors = async (token: string) => {
     setLoading(true);
     try {
+      // First, fetch logged-in users from your database/API
+      const loggedInUsersResponse = await fetch('/api/logged-in-users');
+      const loggedInUsers = await loggedInUsersResponse.json();
+      const loggedInUsernames = new Set(loggedInUsers.map((user: any) => user.login));
+
       const reposResponse = await fetch('https://api.github.com/orgs/nst-sdc/repos', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -73,10 +79,12 @@ export default function Leaderboard() {
       });
 
       const sortedContributors = Array.from(contributorMap.values())
+        .filter(contributor => loggedInUsernames.has(contributor.login))
         .sort((a, b) => b.contributions - a.contributions)
         .map((contributor, index) => ({
           ...contributor,
-          rank: index + 1
+          rank: index + 1,
+          hasLoggedIn: true
         }));
 
       setContributors(sortedContributors);
@@ -201,4 +209,4 @@ export default function Leaderboard() {
       </main>
     </div>
   );
-} 
+}
