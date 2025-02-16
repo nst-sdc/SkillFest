@@ -36,7 +36,7 @@ export default function Leaderboard() {
       // First, fetch logged-in users from your database/API
       const loggedInUsersResponse = await fetch('/api/logged-in-users');
       const loggedInUsers = await loggedInUsersResponse.json();
-      const loggedInUsernames = new Set(loggedInUsers.map((user: LoggedInUser) => user.login));
+      const loggedInUsernames = new Set(loggedInUsers.map((user: LoggedInUser) => user.login?.toLowerCase()));
 
       const reposResponse = await fetch('https://api.github.com/orgs/nst-sdc/repos', {
         headers: {
@@ -69,26 +69,33 @@ export default function Leaderboard() {
       const contributorMap = new Map<string, Contributor>();
       
       allContributors.flat().forEach((contributor: Contributor) => {
-        if (contributorMap.has(contributor.login)) {
-          const existing = contributorMap.get(contributor.login)!;
+        const login = contributor.login.toLowerCase(); // Normalize usernames
+        if (contributorMap.has(login)) {
+          const existing = contributorMap.get(login)!;
           existing.contributions += contributor.contributions;
         } else {
-          contributorMap.set(contributor.login, {
+          contributorMap.set(login, {
             login: contributor.login,
             avatar_url: contributor.avatar_url,
             contributions: contributor.contributions,
             html_url: contributor.html_url,
+            hasLoggedIn: loggedInUsernames.has(login)
           });
         }
       });
 
+      // Show all contributors but sort logged-in users first
       const sortedContributors = Array.from(contributorMap.values())
-        .filter(contributor => loggedInUsernames.has(contributor.login))
-        .sort((a, b) => b.contributions - a.contributions)
+        .sort((a, b) => {
+          // First sort by logged-in status
+          if (a.hasLoggedIn && !b.hasLoggedIn) return -1;
+          if (!a.hasLoggedIn && b.hasLoggedIn) return 1;
+          // Then sort by contributions
+          return b.contributions - a.contributions;
+        })
         .map((contributor, index) => ({
           ...contributor,
-          rank: index + 1,
-          hasLoggedIn: true
+          rank: index + 1
         }));
 
       setContributors(sortedContributors);
@@ -174,6 +181,11 @@ export default function Leaderboard() {
                           </div>
                         </div>
                         <div className="text-right">
+                          {contributor.hasLoggedIn && (
+                            <div className="text-xs px-2 py-1 rounded-full bg-[#238636]/20 text-[#238636] border border-[#238636]/20 mb-2">
+                              Logged In
+                            </div>
+                          )}
                           {(contributor.rank !== undefined && contributor.rank <= 15) && (
                             <div className="text-xs px-2 py-1 rounded-full bg-[#238636]/20 text-[#238636] border border-[#238636]/20">
                               Qualifying

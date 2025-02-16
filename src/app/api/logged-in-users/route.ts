@@ -13,8 +13,8 @@ export async function GET() {
     // Here you would fetch from your database
     // For now, we'll return a mock list
     const loggedInUsers = [
-      // This should be populated from your database
-      { login: session.user?.name }
+      // Using GitHub login instead of display name
+      { login: session.user?.email?.split('@')[0] || session.user?.name }
     ];
 
     return NextResponse.json(loggedInUsers);
