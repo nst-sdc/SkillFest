@@ -1,11 +1,12 @@
 'use client';
 
 import { useSession } from "next-auth/react";
-import { ArrowLeft, Github, Terminal, Code, GitPullRequest, ExternalLink, Star, Trophy, Users, ArrowRight } from "lucide-react";
+import { ArrowLeft, Github, Terminal, Code, GitPullRequest, ExternalLink, Star, Trophy, Users } from "lucide-react";
 import Link from "next/link";
 import { SignInButton } from "@/components/sign-in-button";
 import { useEffect, useState } from "react";
 import { LoginPopup } from "@/components/login-popup";
+import Image from 'next/image';
 
 type Issue = {
   id: number;
@@ -93,8 +94,8 @@ export default function SkillFest() {
         });
         
         if (issuesResponse.ok) {
-          const issues = await issuesResponse.json();
-          return issues.map((issue: any) => ({
+          const issues = await issuesResponse.json() as Issue[];
+          return issues.map((issue: Issue) => ({
             ...issue,
             repository: {
               name: repo.name,
@@ -151,7 +152,7 @@ export default function SkillFest() {
       // Combine and aggregate contributions
       const contributorMap = new Map<string, Contributor>();
       
-      allContributors.flat().forEach((contributor: any) => {
+      allContributors.flat().forEach((contributor: Contributor) => {
         if (contributorMap.has(contributor.login)) {
           const existing = contributorMap.get(contributor.login)!;
           existing.contributions += contributor.contributions;
@@ -246,10 +247,12 @@ export default function SkillFest() {
                   <div className="relative p-4 bg-[#161b22] rounded-lg">
                     <div className="flex flex-col items-center">
                       <div className="relative">
-                        <img
+                        <Image 
                           src={contributor.avatar_url}
                           alt={contributor.login}
-                          className="w-16 h-16 rounded-full mb-2"
+                          width={40}
+                          height={40}
+                          className="rounded-full mb-2"
                         />
                         {index === 0 && (
                           <div className="absolute -top-2 -right-2">
@@ -406,15 +409,21 @@ export default function SkillFest() {
             <div className="space-y-8">
               <div className="p-8 rounded-lg border border-[#30363d] bg-[#161b22] backdrop-blur-sm">
                 <div className="flex items-center gap-6 mb-8">
-                  <img 
-                    src={session.user?.image!} 
-                    alt={session.user?.name!} 
-                    className="w-16 h-16 rounded-full border-4 border-[#238636]"
-                  />
-                  <div>
-                    <h2 className="text-2xl font-bold text-white mb-2">Welcome, {session.user?.name}</h2>
-                    <p className="text-[#8b949e]">Ready to start contributing? Choose an issue below!</p>
-                  </div>
+                  {session.user?.image && session.user?.name && (
+                    <>
+                      <Image 
+                        src={session.user.image} 
+                        alt={session.user.name} 
+                        width={40}
+                        height={40}
+                        className="rounded-full border-4 border-[#238636]"
+                      />
+                      <div>
+                        <h2 className="text-2xl font-bold text-white mb-2">Welcome, {session.user.name}</h2>
+                        <p className="text-[#8b949e]">Ready to start contributing? Choose an issue below!</p>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div className="flex gap-4 mb-6">

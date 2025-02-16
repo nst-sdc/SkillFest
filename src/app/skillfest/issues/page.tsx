@@ -1,19 +1,57 @@
 'use client';
 
 import { useSession } from "next-auth/react";
-import { ArrowLeft, Code, ExternalLink, Search, Filter } from "lucide-react";
+import { ArrowLeft, ExternalLink, Search, Filter, Github, GitPullRequest } from "lucide-react";
 import Link from "next/link";
 import { SignInButton } from "@/components/sign-in-button";
 import { useEffect, useState } from "react";
 
-// ... keep the Issue type from skillfest/page.tsx
+// Add the Issue type definition
+type Issue = {
+  id: number;
+  title: string;
+  html_url: string;
+  repository: {
+    name: string;
+  };
+  labels: {
+    name: string;
+    color: string;
+  }[];
+};
 
 export default function Issues() {
   const { data: session, status } = useSession();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // ... keep the fetchIssues function from skillfest/page.tsx
+  // Add the fetchIssues function
+  useEffect(() => {
+    if (session?.accessToken) {
+      fetchIssues(session.accessToken);
+    }
+  }, [session]);
+
+  const fetchIssues = async (token: string) => {
+    setLoading(true);
+    try {
+      const response = await fetch('https://api.github.com/orgs/nst-sdc/issues', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github.v3+json',
+        },
+      });
+      
+      if (!response.ok) throw new Error(`GitHub API error: ${response.status}`);
+      
+      const data = await response.json();
+      setIssues(data);
+    } catch (error) {
+      console.error('Error fetching issues:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -80,4 +118,71 @@ export default function Issues() {
   );
 }
 
-// ... keep the IssueCard, LoadingState, and EmptyState components 
+function LoadingState() {
+  return (
+    <div className="flex items-center justify-center h-40">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#238636]" />
+    </div>
+  );
+}
+
+function SignInPrompt() {
+  return (
+    <div className="text-center">
+      <div className="max-w-sm mx-auto p-8 rounded-lg border border-[#30363d] bg-[#161b22] backdrop-blur-sm">
+        <Github className="w-16 h-16 text-[#8b949e] mx-auto mb-6" />
+        <h3 className="text-xl font-bold text-white mb-4">Join SkillFest 2024</h3>
+        <p className="text-[#8b949e] mb-6">
+          Sign in with GitHub to start your journey and track your progress
+        </p>
+        <SignInButton />
+      </div>
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="text-center py-12 text-[#8b949e]">
+      <GitPullRequest className="w-12 h-12 mx-auto mb-4 opacity-50" />
+      <p className="text-lg">No open issues available at the moment.</p>
+      <p className="text-sm">Check back soon for new challenges!</p>
+    </div>
+  );
+}
+
+function IssueCard({ issue }: { issue: Issue }) {
+  return (
+    <a 
+      href={issue.html_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block p-4 rounded-lg border border-[#30363d] bg-[#161b22] hover:border-[#238636] transition-all duration-200"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-white font-medium mb-2">{issue.title}</h3>
+          <div className="flex items-center gap-4 text-sm">
+            <span className="text-[#8b949e]">{issue.repository.name}</span>
+            <div className="flex items-center gap-2">
+              {issue.labels.map((label) => (
+                <span
+                  key={label.name}
+                  className="px-2 py-0.5 rounded-full text-xs"
+                  style={{
+                    backgroundColor: `#${label.color}20`,
+                    color: `#${label.color}`,
+                    border: `1px solid #${label.color}40`
+                  }}
+                >
+                  {label.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+        <ExternalLink className="w-4 h-4 text-[#8b949e]" />
+      </div>
+    </a>
+  );
+} 

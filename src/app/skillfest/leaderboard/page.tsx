@@ -1,10 +1,10 @@
 'use client';
 
 import { useSession } from "next-auth/react";
-import { ArrowLeft, Trophy, GitPullRequest, Star, Medal } from "lucide-react";
+import { ArrowLeft, Trophy, GitPullRequest, Star } from "lucide-react";
 import Link from "next/link";
-import { SignInButton } from "@/components/sign-in-button";
 import { useEffect, useState } from "react";
+import Image from 'next/image';
 
 type Contributor = {
   login: string;
@@ -15,7 +15,7 @@ type Contributor = {
 };
 
 export default function Leaderboard() {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const [contributors, setContributors] = useState<Contributor[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -58,7 +58,7 @@ export default function Leaderboard() {
       const allContributors = await Promise.all(allContributorsPromises);
       const contributorMap = new Map<string, Contributor>();
       
-      allContributors.flat().forEach((contributor: any) => {
+      allContributors.flat().forEach((contributor: Contributor) => {
         if (contributorMap.has(contributor.login)) {
           const existing = contributorMap.get(contributor.login)!;
           existing.contributions += contributor.contributions;
@@ -82,8 +82,9 @@ export default function Leaderboard() {
       setContributors(sortedContributors);
     } catch (error) {
       console.error('Error fetching contributors:', error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const getPositionStyle = (rank: number) => {
@@ -139,10 +140,12 @@ export default function Leaderboard() {
                         <div className="text-2xl font-bold text-[#8b949e] w-8">
                           #{contributor.rank}
                         </div>
-                        <img
+                        <Image 
                           src={contributor.avatar_url}
                           alt={contributor.login}
-                          className="w-12 h-12 rounded-full"
+                          width={40}
+                          height={40}
+                          className="rounded-full"
                         />
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
@@ -159,7 +162,7 @@ export default function Leaderboard() {
                           </div>
                         </div>
                         <div className="text-right">
-                          {contributor.rank <= 15 && (
+                          {(contributor.rank !== undefined && contributor.rank <= 15) && (
                             <div className="text-xs px-2 py-1 rounded-full bg-[#238636]/20 text-[#238636] border border-[#238636]/20">
                               Qualifying
                             </div>

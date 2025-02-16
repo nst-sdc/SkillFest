@@ -1,6 +1,5 @@
 import NextAuth from "next-auth";
 import GithubProvider from "next-auth/providers/github";
-import { JWT } from "next-auth/jwt";
 
 // Extend the built-in session and JWT types
 declare module "next-auth" {
