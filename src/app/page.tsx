@@ -134,7 +134,11 @@ function CategoryCard({
         ))}
       </ul>
       <Link 
-        href={session ? (title === "Developer" ? "/skillfest" : "/register") : "#"}
+        href={session ? (
+          title === "Developer" ? "/skillfest" : 
+          title === "Creative Lead" ? "/creative" :
+          "/register"
+        ) : "#"}
         onClick={handleClick}
         className="w-full py-2 rounded-lg bg-[#238636] hover:bg-[#2ea043] text-white transition-colors flex items-center justify-center gap-2"
       >
