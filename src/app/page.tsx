@@ -16,7 +16,7 @@ export default function Home() {
         <div className="text-center mb-20 space-y-6">
           <div className="inline-block">
             <span className="bg-[#238636] text-white text-sm font-medium px-4 py-1.5 rounded-full">
-              Recruitment Open 2024
+              Recruitment Open 2025
             </span>
           </div>
           <h1 className="text-5xl md:text-7xl font-bold mb-4 text-foreground">
