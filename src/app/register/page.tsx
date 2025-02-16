@@ -4,9 +4,12 @@ import { useSession } from "next-auth/react";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { SignInButton } from "@/components/sign-in-button";
+import { LoginPopup } from "@/components/login-popup";
+import { useState } from "react";
 
 export default function Register() {
   const { data: session, status } = useSession();
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
@@ -57,7 +60,10 @@ export default function Register() {
                   />
                 </div>
 
-                <button className="w-full mt-6 py-3 rounded-lg bg-[#238636] hover:bg-[#2ea043] text-white transition-colors">
+                <button 
+                  onClick={() => !session && setShowLoginPopup(true)} 
+                  className="w-full mt-6 py-3 rounded-lg bg-[#238636] hover:bg-[#2ea043] text-white transition-colors"
+                >
                   Continue Application
                 </button>
               </div>
@@ -65,6 +71,8 @@ export default function Register() {
           )}
         </div>
       </main>
+
+      {showLoginPopup && <LoginPopup onClose={() => setShowLoginPopup(false)} />}
     </div>
   );
 }

@@ -1,6 +1,11 @@
+'use client';
+
 import { SignInButton } from "@/components/sign-in-button";
 import { ArrowRight, Code, Palette, PenTool } from "lucide-react";
 import Link from "next/link";
+import { useState } from 'react';
+import { useSession } from "next-auth/react";
+import { LoginPopup } from "@/components/login-popup";
 
 export default function Home() {
   return (
@@ -101,6 +106,16 @@ function CategoryCard({
   icon: React.ReactNode;
   points: string[];
 }) {
+  const { data: session } = useSession();
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (!session) {
+      e.preventDefault();
+      setShowLoginPopup(true);
+    }
+  };
+
   return (
     <div className="group p-6 rounded-lg border border-[#30363d] bg-[#161b22] hover:border-[#8b949e] transition-all duration-200">
       <div className="flex items-center gap-3 mb-4">
@@ -119,11 +134,14 @@ function CategoryCard({
         ))}
       </ul>
       <Link 
-        href={title === "Developer" ? "/skillfest" : "/register"}
+        href={session ? (title === "Developer" ? "/skillfest" : "/register") : "#"}
+        onClick={handleClick}
         className="w-full py-2 rounded-lg bg-[#238636] hover:bg-[#2ea043] text-white transition-colors flex items-center justify-center gap-2"
       >
         Apply Now <ArrowRight className="w-4 h-4" />
       </Link>
+
+      {showLoginPopup && <LoginPopup onClose={() => setShowLoginPopup(false)} />}
     </div>
   );
 }
