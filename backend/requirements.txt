@@ -1,0 +1,7 @@
+flask==2.3.3
+pymongo==4.5.0
+python-dotenv==1.0.0
+flask-login==0.6.2
+flask-cors==4.0.0
+bcrypt==4.0.1
+python-jwt==4.0.0
