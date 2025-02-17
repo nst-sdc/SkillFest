@@ -33,7 +33,7 @@ export default function Creative() {
               Logo Design Competition
             </h1>
             <p className="text-xl text-[#8b949e] max-w-2xl mx-auto">
-              Design the official logo for NST SDC and secure your spot in our creative team. Top 3 designers will be recruited!
+              Design the official  logo for NST SDC and secure your spot in our creative team. Top 3 designers will be recruited!
             </p>
           </div>
 
