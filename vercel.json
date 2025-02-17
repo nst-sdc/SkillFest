@@ -6,9 +6,12 @@
       "use": "@vercel/next"
     }
   ],
+  "buildCommand": "next build",
   "env": {
     "MONGODB_URI": "@mongodb_uri",
     "NEXTAUTH_URL": "@nextauth_url",
-    "NEXTAUTH_SECRET": "@nextauth_secret"
+    "NEXTAUTH_SECRET": "@nextauth_secret",
+    "GITHUB_ID": "@github_id",
+    "GITHUB_SECRET": "@github_secret"
   }
 }
