@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { signIn } from "next-auth/react";
@@ -44,7 +43,7 @@ export function LoginPopup({ onClose }: { onClose: () => void }) {
                 <Rocket className="w-12 h-12 text-white animate-bounce" />
               </div>
             </div>
-            <h2 className="text-2xl font-bold text-white mb-2">Join SkillFest 2025</h2>
+            <h2 className="text-2xl font-bold text-white mb-2">Join SkillFest 2024</h2>
             <p className="text-[#8b949e]">
               Sign in with GitHub to start your journey and showcase your skills
             </p>
@@ -84,4 +83,4 @@ export function LoginPopup({ onClose }: { onClose: () => void }) {
       </div>
     </div>
   );
-}
+} 

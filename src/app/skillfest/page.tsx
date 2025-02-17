@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useSession } from "next-auth/react";
@@ -569,4 +568,4 @@ function EmptyState() {
       <p className="text-sm">Check back soon for new challenges!</p>
     </div>
   );
-}
+} 

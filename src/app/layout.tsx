@@ -1,9 +1,12 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Metadata } from "next";
-import { GeistSans } from "geist/font/sans";
+import { Geist } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { Footer } from "@/components/footer";
 import "./globals.css";
+
+const geist = Geist({
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
   title: "Dev Club Recruitment",
@@ -17,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${GeistSans.className} flex flex-col min-h-screen`}>
+      <body className={`${geist.className} flex flex-col min-h-screen`}>
         <Providers>
           <main className="flex-1">
             {children}
