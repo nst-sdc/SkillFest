@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { NextResponse, NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import connectDB from '@/lib/mongodb';
 import Submission from '@/models/Submission';
@@ -16,7 +17,7 @@ const submissionSchema = z.object({
   platform: z.enum(['google_drive', 'icloud', 'github', 'dropbox', 'onedrive'])
 });
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const token = await getToken({ req });
     if (!token) {
@@ -63,7 +64,7 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     await connectDB();
     

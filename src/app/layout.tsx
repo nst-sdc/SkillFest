@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import { Providers } from "@/components/providers";

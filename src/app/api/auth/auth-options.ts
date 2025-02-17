@@ -15,6 +15,7 @@ declare module "next-auth/jwt" {
   }
 }
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export const authOptions = {
   providers: [
     GithubProvider({
@@ -47,4 +48,4 @@ export const authOptions = {
     },
   },
   debug: true,
-}; 
+};

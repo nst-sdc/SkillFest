@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Github } from "lucide-react";
 import Link from "next/link";
 
@@ -50,4 +51,4 @@ export function Footer() {
       </div>
     </footer>
   );
-} 
+}

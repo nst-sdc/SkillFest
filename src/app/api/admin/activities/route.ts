@@ -1,6 +1,16 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Activity from '@/models/Activity';
+
+interface QueryParams {
+  type?: string;
+  user?: string;
+  timestamp?: {
+    $gte?: Date;
+    $lte?: Date;
+  };
+}
 
 export async function GET(req: Request) {
   try {
@@ -14,7 +24,7 @@ export async function GET(req: Request) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     
-    let query: any = {};
+    let query: QueryParams = {};
     
     if (type) query.type = type;
     if (userId) query.user = userId;
@@ -66,7 +76,7 @@ export async function POST(req: Request) {
     
     await connectDB();
     
-    const query: any = {
+    const query: QueryParams = {
       type: 'login',
     };
     

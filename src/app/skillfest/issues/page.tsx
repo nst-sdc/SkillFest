@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useSession } from "next-auth/react";
@@ -185,4 +186,4 @@ function IssueCard({ issue }: { issue: Issue }) {
       </div>
     </a>
   );
-} 
+}

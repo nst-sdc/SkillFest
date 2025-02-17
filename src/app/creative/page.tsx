@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useSession } from "next-auth/react";
@@ -194,4 +195,4 @@ function ListItem({ children }: { children: React.ReactNode }) {
       {children}
     </li>
   );
-} 
+}

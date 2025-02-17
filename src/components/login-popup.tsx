@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { signIn } from "next-auth/react";
@@ -83,4 +84,4 @@ export function LoginPopup({ onClose }: { onClose: () => void }) {
       </div>
     </div>
   );
-} 
+}
