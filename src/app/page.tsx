@@ -1,7 +1,7 @@
 'use client';
 
 import { SignInButton } from "@/components/sign-in-button";
-import { ArrowRight, Code, Palette, PenTool } from "lucide-react";
+import { ArrowRight, Code, Palette, Sparkles, Zap } from "lucide-react";
 import Link from "next/link";
 import { useState } from 'react';
 import { useSession } from "next-auth/react";
@@ -26,46 +26,31 @@ export default function Home() {
             Join our elite team of developers, designers, and creators
           </p>
           
-          <div className="flex justify-center mt-8 gap-4">
+          <div className="flex justify-center mt-8">
             <SignInButton />
-            <Link 
-              href="/register" 
-              className="inline-flex items-center gap-2 bg-[#238636] hover:bg-[#2ea043] text-white px-6 py-3 rounded-lg transition-colors"
-            >
-              Apply Now <ArrowRight className="w-4 h-4" />
-            </Link>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          <CategoryCard 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+          <CategoryCard
             title="Developer"
-            description="Join our development team and build amazing projects"
+            description="Join our development team and contribute to exciting projects"
             icon={<Code className="w-6 h-6 text-[#238636]" />}
             points={[
               "Work on real-world projects",
               "Learn modern technologies",
-              "Collaborate with the team"
+              "Collaborate with other developers"
             ]}
           />
-          <CategoryCard 
-            title="UI/UX Designer"
-            description="Create beautiful and intuitive user experiences"
-            icon={<Palette className="w-6 h-6 text-[#A371F7]" />}
-            points={[
-              "Design user interfaces",
-              "Create design systems",
-              "Improve user experience"
-            ]}
-          />
-          <CategoryCard 
+          
+          <CategoryCard
             title="Creative Lead"
-            description="Lead our creative initiatives and branding"
-            icon={<PenTool className="w-6 h-6 text-[#F778BA]" />}
+            description="Lead our creative initiatives and shape our brand identity"
+            icon={<Palette className="w-6 h-6 text-[#F778BA]" />}
             points={[
-              "Manage social media",
-              "Create club branding",
-              "Design marketing materials"
+              "Design brand assets",
+              "Create visual content",
+              "Lead creative projects"
             ]}
           />
         </div>
@@ -108,6 +93,7 @@ function CategoryCard({
 }) {
   const { data: session } = useSession();
   const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   const handleClick = (e: React.MouseEvent) => {
     if (!session) {
@@ -117,35 +103,66 @@ function CategoryCard({
   };
 
   return (
-    <div className="group p-6 rounded-lg border border-[#30363d] bg-[#161b22] hover:border-[#8b949e] transition-all duration-200">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="p-2 rounded-lg bg-[#1f2428]">
-          {icon}
-        </div>
-        <h3 className="text-xl font-semibold text-white">{title}</h3>
+    <div 
+      className="group relative p-8 rounded-xl border border-[#30363d] bg-[#161b22] hover:border-[#8b949e] transition-all duration-300 overflow-hidden"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* Animated gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-r from-[#238636]/10 via-transparent to-[#F778BA]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      
+      {/* Sparkle effects */}
+      <div className="absolute -top-10 -right-10 transform rotate-45 opacity-0 group-hover:opacity-20 transition-opacity duration-500">
+        <Sparkles className="w-20 h-20 text-white" />
       </div>
-      <p className="text-[#8b949e] mb-6">{description}</p>
-      <ul className="space-y-3 mb-6">
-        {points.map((point, index) => (
-          <li key={index} className="flex items-center gap-2 text-sm text-[#8b949e]">
-            <div className="w-1 h-1 rounded-full bg-[#8b949e]" />
-            {point}
-          </li>
-        ))}
-      </ul>
-      <Link 
-        href={session ? (
-          title === "Developer" ? "/skillfest" : 
-          title === "Creative Lead" ? "/creative" :
-          "/register"
-        ) : "#"}
-        onClick={handleClick}
-        className="w-full py-2 rounded-lg bg-[#238636] hover:bg-[#2ea043] text-white transition-colors flex items-center justify-center gap-2"
-      >
-        Apply Now <ArrowRight className="w-4 h-4" />
-      </Link>
 
-      {showLoginPopup && <LoginPopup onClose={() => setShowLoginPopup(false)} />}
+      <div className="relative">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-6">
+          <div className="p-3 rounded-xl bg-[#1f2428] transform group-hover:scale-110 transition-transform duration-300">
+            {icon}
+          </div>
+          <div>
+            <h3 className="text-2xl font-bold text-white mb-1">{title}</h3>
+            <div className="h-1 w-12 bg-gradient-to-r from-[#238636] to-[#F778BA] rounded-full transform origin-left group-hover:scale-x-150 transition-transform duration-300" />
+          </div>
+        </div>
+
+        {/* Description */}
+        <p className="text-[#8b949e] mb-8 group-hover:text-white transition-colors duration-300">
+          {description}
+        </p>
+
+        {/* Points */}
+        <ul className="space-y-4 mb-8">
+          {points.map((point, index) => (
+            <li 
+              key={index} 
+              className="flex items-center gap-3 text-[#8b949e] group-hover:text-white transition-all duration-300"
+              style={{ transitionDelay: `${index * 100}ms` }}
+            >
+              <Zap className="w-4 h-4 text-[#238636] group-hover:scale-125 transition-transform duration-300" />
+              {point}
+            </li>
+          ))}
+        </ul>
+
+        {/* Apply Button */}
+        <Link 
+          href={session ? (
+            title === "Developer" ? "/skillfest" : 
+            title === "Creative Lead" ? "/creative" :
+            "/register"
+          ) : "#"}
+          onClick={handleClick}
+          className="w-full py-3 rounded-xl bg-gradient-to-r from-[#238636] to-[#2ea043] hover:from-[#2ea043] hover:to-[#238636] text-white transition-all duration-300 flex items-center justify-center gap-2 transform group-hover:translate-y-[-2px] group-hover:shadow-lg"
+        >
+          Apply Now 
+          <ArrowRight className={`w-4 h-4 transition-transform duration-300 ${isHovered ? 'translate-x-1' : ''}`} />
+        </Link>
+
+        {showLoginPopup && <LoginPopup onClose={() => setShowLoginPopup(false)} />}
+      </div>
     </div>
   );
 }
