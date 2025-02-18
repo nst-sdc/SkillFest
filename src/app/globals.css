@@ -3,8 +3,13 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0d1117;
+  --foreground: #ffffff;
+  --primary: #F778BA;
+  --primary-hover: #A371F7;
+  --secondary: #161b22;
+  --border: #30363d;
+  --text-muted: #8b949e;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -21,8 +26,8 @@ body {
 }
 
 .bg-grid-pattern {
-  background-image: linear-gradient(to right, #30363d 1px, transparent 1px),
-    linear-gradient(to bottom, #30363d 1px, transparent 1px);
+  background-image: linear-gradient(to right, var(--border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
@@ -36,7 +41,7 @@ body {
   position: absolute;
   width: 2px;
   height: 2px;
-  background: #238636;
+  background: var(--primary);
   border-radius: 50%;
   opacity: 0;
   animation: twinkle 1.5s infinite ease-in-out;
@@ -57,4 +62,42 @@ body {
 .bg-gradient-text {
   background-size: 200% auto;
   animation: gradient 3s linear infinite;
+}
+
+/* Common components styling */
+.card {
+  @apply p-6 rounded-lg bg-[#161b22] border border-[#F778BA]/20 hover:border-[#F778BA]/40 transition-all duration-300;
+}
+
+.button-primary {
+  @apply relative flex items-center justify-center gap-3 px-8 py-4 bg-[#0d1117] rounded-xl border border-[#F778BA]/20 text-lg font-semibold text-white hover:bg-[#161b22] transition-all duration-300;
+}
+
+.gradient-text {
+  @apply bg-gradient-to-r from-[#F778BA] to-[#A371F7] text-transparent bg-clip-text;
+}
+
+.hover-gradient {
+  @apply absolute -inset-1 bg-gradient-to-r from-[#F778BA] to-[#A371F7] rounded-xl blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200;
+}
+
+/* Add these new animations */
+@keyframes gradient-xy {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.animate-gradient-xy {
+  animation: gradient-xy 15s ease infinite;
+  background-size: 400% 400%;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+  100% { transform: translateY(0px); }
 }

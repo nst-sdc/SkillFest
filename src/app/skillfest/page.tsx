@@ -250,8 +250,8 @@ export default function SkillFest() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="absolute inset-0 bg-grid-pattern opacity-[0.15]" />
+    <div className="min-h-screen bg-[#0d1117]">
+      <div className="absolute inset-0 bg-grid-pattern opacity-[0.1]" />
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="stars-container">
           {stars.map((star, i) => (
@@ -271,7 +271,7 @@ export default function SkillFest() {
       <main className="container mx-auto px-4 py-16 relative z-10">
         <Link 
           href="/"
-          className="inline-flex items-center gap-2 text-[#8b949e] hover:text-white transition-colors mb-8"
+          className="inline-flex items-center gap-2 text-[#8b949e] hover:text-[#F778BA] transition-colors mb-8"
         >
           <ArrowLeft className="w-4 h-4" /> Back to home
         </Link>

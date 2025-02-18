@@ -49,17 +49,15 @@ export function SignInButton() {
   return (
     <button
       onClick={() => signIn('github')}
-      className="group relative inline-flex items-center gap-3 bg-[#161b22] hover:bg-[#1f2428] text-white px-6 py-3 rounded-xl border border-[#30363d] hover:border-[#8b949e] transition-all duration-300 hover:shadow-lg overflow-hidden"
+      className="group relative inline-flex items-center gap-3 bg-[#161b22] hover:bg-[#1f2428] text-white px-6 py-3 rounded-xl border border-[#F778BA]/20 hover:border-[#F778BA]/40 transition-all duration-300 hover:shadow-lg overflow-hidden"
     >
-      {/* Animated gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-r from-[#238636]/10 via-transparent to-[#238636]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      <div className="absolute inset-0 bg-gradient-to-r from-[#F778BA]/10 via-transparent to-[#F778BA]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
       
-      {/* Content */}
       <div className="relative flex items-center gap-3">
         <Github className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
         <span className="font-medium">Sign in with GitHub</span>
         <div 
-          className="absolute bottom-0 left-0 h-[2px] w-full bg-gradient-to-r from-[#238636] to-[#2ea043] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"
+          className="absolute bottom-0 left-0 h-[2px] w-full bg-gradient-to-r from-[#F778BA] to-[#A371F7] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"
         />
       </div>
     </button>

@@ -9,17 +9,17 @@ import { LoginPopup } from "@/components/login-popup";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-background">
-      <div className="absolute inset-0 bg-grid-pattern opacity-[0.15]" />
+    <div className="min-h-screen bg-[#0d1117]">
+      <div className="absolute inset-0 bg-grid-pattern opacity-[0.1]" />
       
       <main className="container mx-auto px-4 py-16 relative z-10">
         <div className="text-center mb-20 space-y-6">
           <div className="inline-block">
-            <span className="bg-[#238636] text-white text-sm font-medium px-4 py-1.5 rounded-full">
+            <span className="bg-[#F778BA] text-white text-sm font-medium px-4 py-1.5 rounded-full">
               SkillFest 2025 is Live 🚀
             </span>
           </div>
-          <h1 className="text-5xl md:text-7xl font-bold mb-4 text-foreground">
+          <h1 className="text-5xl md:text-7xl font-bold mb-4 gradient-text">
             Dev Club Recruitment
           </h1>
           <p className="text-xl text-[#8b949e] max-w-2xl mx-auto">

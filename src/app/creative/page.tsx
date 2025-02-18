@@ -1,38 +1,66 @@
 'use client';
 
 import { useSession } from "next-auth/react";
-import { ArrowLeft, Trophy, Palette, Upload, Star } from "lucide-react";
+import { ArrowLeft, Trophy, Palette, Upload, Star, ExternalLink, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { SignInButton } from "@/components/sign-in-button";
 import { LoginPopup } from "@/components/login-popup";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Creative() {
   const { data: session, status } = useSession();
   const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+
+  // Mouse follow effect
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePosition({ x: e.clientX, y: e.clientY });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  const handleSubmitClick = () => {
+    window.open('https://docs.google.com/forms/d/e/1FAIpQLSe4dI6yVvUxGZkKZUAm8wv2TeAdNqBVCAlmLBK_NMrYOPcc3g/viewform?usp=header', '_blank');
+  };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="absolute inset-0 bg-grid-pattern opacity-[0.15]" />
+    <div className="min-h-screen flex flex-col bg-[#0d1117] overflow-hidden relative">
+      <div className="fixed inset-0 bg-grid-pattern opacity-[0.1]" />
+      <div 
+        className="fixed inset-0 bg-gradient-to-r from-[#F778BA]/5 to-[#A371F7]/5 opacity-50"
+        style={{
+          transform: `translate(${(mousePosition.x * 0.02)}px, ${(mousePosition.y * 0.02)}px)`,
+          transition: 'transform 0.2s ease-out',
+        }}
+      />
       
-      <main className="container mx-auto px-4 py-16 relative z-10">
+      <main className="flex-1 container mx-auto px-4 py-16 relative z-10">
         <Link 
           href="/"
-          className="inline-flex items-center gap-2 text-[#8b949e] hover:text-white transition-colors mb-8"
+          className="inline-flex items-center gap-2 text-[#8b949e] hover:text-[#F778BA] transition-colors mb-8"
         >
           <ArrowLeft className="w-4 h-4" /> Back to home
         </Link>
 
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-r from-[#F778BA] to-[#A371F7] mb-8 transform hover:scale-110 transition-transform">
-              <Palette className="w-10 h-10 text-white" />
+            <div className="relative inline-block">
+              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#F778BA] to-[#A371F7] blur-xl opacity-30 animate-pulse" />
+              <div className="relative inline-flex items-center justify-center w-24 h-24 rounded-full bg-[#161b22] border border-[#F778BA]/20 mb-8 transform hover:scale-110 transition-transform duration-300">
+                <Palette className="w-12 h-12 text-[#F778BA]" />
+                <Sparkles className="absolute -top-2 -right-2 w-6 h-6 text-[#A371F7] animate-pulse" />
+              </div>
             </div>
-            <h1 className="text-5xl font-bold mb-6 text-foreground bg-gradient-to-r from-[#F778BA] to-[#A371F7] text-transparent bg-clip-text">
-              Logo Design Competition
+            <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-[#F778BA] to-[#A371F7] text-transparent bg-clip-text">
+              Logomania
             </h1>
-            <p className="text-xl text-[#8b949e] max-w-2xl mx-auto">
-              Design the official logo for NST SDC and secure your spot in our creative team. Top 3 designers will be recruited!
+            <p className="text-[#8b949e] text-xl max-w-2xl mx-auto">
+              Design the official logo for NST SDC and secure your spot in our creative team. 
+              <span className="block mt-2 text-white/80">Top 3 designers will be recruited!</span>
             </p>
           </div>
 
@@ -41,30 +69,33 @@ export default function Creative() {
               position="1st Place"
               prize="Club Membership + Lead Role"
               perks={["Creative Lead Position", "Project Leadership", "Club Benefits"]}
-              color="from-yellow-400 to-yellow-600"
-              icon={<Trophy className="w-6 h-6" />}
+              color="bg-[#161b22]"
+              icon={<Trophy className="w-6 h-6 text-[#FFD700]" />}
             />
             <PrizeCard 
               position="2nd Place"
               prize="Club Membership"
               perks={["Creative Team Role", "Project Access", "Club Benefits"]}
-              color="from-gray-300 to-gray-400"
-              icon={<Trophy className="w-6 h-6" />}
+              color="bg-[#161b22]"
+              icon={<Trophy className="w-6 h-6 text-[#C0C0C0]" />}
             />
             <PrizeCard 
               position="3rd Place"
               prize="Club Membership"
               perks={["Creative Team Role", "Project Access", "Club Benefits"]}
-              color="from-amber-700 to-amber-800"
-              icon={<Trophy className="w-6 h-6" />}
+              color="bg-[#161b22]"
+              icon={<Trophy className="w-6 h-6 text-[#CD7F32]" />}
             />
           </div>
 
-          <div className="text-center mb-12 p-6 rounded-lg bg-gradient-to-r from-[#F778BA]/20 to-[#A371F7]/20 border border-[#F778BA]/30">
-            <h2 className="text-2xl font-bold text-white mb-3">Guaranteed Club Recruitment</h2>
-            <p className="text-[#8b949e]">
-              All top 3 winners will be recruited into the NST SDC Creative Team, with the first-place winner taking the Creative Lead position!
-            </p>
+          <div className="text-center mb-12">
+            <div className="p-6 rounded-lg bg-[#161b22] border border-[#F778BA]/20">
+              <Star className="w-8 h-8 text-[#F778BA] mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-white mb-3">Guaranteed Club Recruitment</h2>
+              <p className="text-[#8b949e]">
+                All top 3 winners will be recruited into the NST SDC Creative Team, with the first-place winner taking the Creative Lead position!
+              </p>
+            </div>
           </div>
 
           {status === 'loading' ? (
@@ -73,7 +104,7 @@ export default function Creative() {
             </div>
           ) : !session ? (
             <div className="text-center">
-              <div className="max-w-sm mx-auto p-8 rounded-lg border border-[#30363d] bg-[#161b22] backdrop-blur-sm">
+              <div className="max-w-sm mx-auto p-8 rounded-lg bg-[#161b22] border border-[#F778BA]/20">
                 <Palette className="w-16 h-16 text-[#F778BA] mx-auto mb-6" />
                 <h3 className="text-xl font-bold text-white mb-4">Join the Competition</h3>
                 <p className="text-[#8b949e] mb-6">
@@ -83,71 +114,70 @@ export default function Creative() {
               </div>
             </div>
           ) : (
-            <div className="space-y-8">
-              <div className="p-8 rounded-lg border border-[#30363d] bg-[#161b22]">
-                <h2 className="text-2xl font-bold text-white mb-6">Competition Guidelines</h2>
+            <div className="text-center">
+              <div className="max-w-xl mx-auto p-8 rounded-lg bg-[#161b22] border border-[#F778BA]/20 relative group">
+                {/* Animated background effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-[#F778BA]/5 to-[#A371F7]/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-lg font-semibold text-white mb-2">Requirements</h3>
-                      <ul className="space-y-2">
-                        <ListItem>Original design representing NST SDC</ListItem>
-                        <ListItem>Vector format (SVG, AI, EPS)</ListItem>
-                        <ListItem>Both color and monochrome versions</ListItem>
-                        <ListItem>Minimum resolution: 1000x1000px</ListItem>
-                      </ul>
-                    </div>
-
-                    <div>
-                      <h3 className="text-lg font-semibold text-white mb-2">Submission</h3>
-                      <ul className="space-y-2">
-                        <ListItem>Submit via GitHub repository</ListItem>
-                        <ListItem>Include design rationale</ListItem>
-                        <ListItem>Deadline: April 15, 2024</ListItem>
-                        <ListItem>Multiple submissions allowed</ListItem>
-                      </ul>
-                    </div>
+                {/* Cool submit button */}
+                <div className="relative group/button">
+                  {/* Gradient border effect */}
+                  <div className="absolute -inset-1 bg-gradient-to-r from-[#F778BA] to-[#A371F7] rounded-xl blur opacity-25 group-hover/button:opacity-100 transition duration-1000 group-hover:duration-200 animate-gradient-xy" />
+                  
+                  {/* Sparkle effects */}
+                  <div className="absolute -top-2 -right-2 text-[#F778BA] animate-bounce">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                  <div className="absolute -bottom-2 -left-2 text-[#A371F7] animate-bounce delay-100">
+                    <Sparkles className="w-5 h-5" />
                   </div>
 
-                  <div className="p-6 rounded-lg bg-[#1f2428] border border-[#30363d]">
-                    <h3 className="text-lg font-semibold text-white mb-4">Submit Your Design</h3>
-                    <p className="text-[#8b949e] mb-6">
-                      Create a pull request with your logo design in the official repository
-                    </p>
-                    <Link
-                      href="https://github.com/nst-sdc/logo-competition"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 w-full py-3 rounded-lg bg-[#F778BA] hover:bg-opacity-90 text-white font-medium justify-center transition-colors"
-                    >
-                      <Upload className="w-5 h-5" />
-                      Submit Design
-                    </Link>
-                  </div>
+                  <button
+                    onClick={handleSubmitClick}
+                    onMouseEnter={() => setIsHovered(true)}
+                    onMouseLeave={() => setIsHovered(false)}
+                    className="relative w-full px-8 py-4 bg-[#0d1117] rounded-xl border border-[#F778BA]/20 text-lg font-semibold text-white transition-all duration-300 overflow-hidden group-hover/button:shadow-2xl group-hover/button:shadow-[#F778BA]/20"
+                  >
+                    {/* Button gradient background */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#F778BA]/10 to-[#A371F7]/10 opacity-0 group-hover/button:opacity-100 transition-opacity duration-500" />
+                    
+                    {/* Button content */}
+                    <div className="relative flex items-center justify-center gap-3">
+                      <Upload 
+                        className={`w-5 h-5 text-[#F778BA] transition-all duration-300 ${
+                          isHovered ? 'transform -translate-y-1 scale-110' : ''
+                        }`}
+                      />
+                      <span className={`transition-transform duration-300 ${
+                        isHovered ? 'transform scale-105' : ''
+                      }`}>
+                        Submit Your Logo Design
+                      </span>
+                      <ExternalLink 
+                        className={`w-4 h-4 text-[#F778BA] transition-all duration-300 ${
+                          isHovered ? 'transform translate-x-1 rotate-45' : ''
+                        }`}
+                      />
+                    </div>
+                  </button>
                 </div>
-              </div>
 
-              <div className="p-6 rounded-lg bg-gradient-to-r from-[#F778BA]/10 to-transparent border border-[#F778BA]/20">
-                <div className="flex items-start gap-4">
-                  <div className="p-3 rounded-lg bg-[#F778BA]/10">
-                    <Star className="w-6 h-6 text-[#F778BA]" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-[#F778BA] mb-2">Selection Criteria</h3>
-                    <div className="space-y-2 text-[#8b949e]">
-                      <p>• Originality and creativity</p>
-                      <p>• Brand representation</p>
-                      <p>• Technical execution</p>
-                      <p>• Versatility and scalability</p>
-                    </div>
-                  </div>
-                </div>
+                <p className="text-[#8b949e] mt-4 text-sm">
+                  Click to open the submission form in a new tab
+                </p>
               </div>
             </div>
           )}
         </div>
       </main>
+
+      <footer className="relative z-10 py-4 text-center text-[#8b949e] border-t border-[#30363d]/20">
+        <div className="container mx-auto px-4">
+          <p className="text-sm">
+            © 2025 NST SDC • All rights reserved
+          </p>
+        </div>
+      </footer>
 
       {showLoginPopup && <LoginPopup onClose={() => setShowLoginPopup(false)} />}
     </div>
@@ -162,36 +192,20 @@ function PrizeCard({ position, prize, perks, color, icon }: {
   icon: React.ReactNode;
 }) {
   return (
-    <div className="p-6 rounded-lg border border-[#30363d] bg-[#161b22] relative group">
-      <div className={`absolute inset-x-0 -top-px h-px w-full bg-gradient-to-r ${color} opacity-50 group-hover:opacity-100 transition-opacity`} />
-      <div className="flex flex-col gap-4">
-        <div className="flex items-start gap-4">
-          <div className={`p-3 rounded-lg bg-gradient-to-r ${color} bg-opacity-10`}>
-            {icon}
-          </div>
-          <div>
-            <h3 className="text-2xl font-bold text-white mb-1">{position}</h3>
-            <p className="text-[#F778BA] font-medium">{prize}</p>
-          </div>
-        </div>
-        <ul className="space-y-2">
-          {perks.map((perk, index) => (
-            <li key={index} className="flex items-center gap-2 text-sm text-[#8b949e]">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#F778BA]" />
-              {perk}
-            </li>
-          ))}
-        </ul>
+    <div className={`p-6 rounded-lg ${color} border border-[#F778BA]/20 hover:border-[#F778BA]/40 transition-colors`}>
+      <div className="flex items-center gap-3 mb-4">
+        {icon}
+        <div className="text-lg font-semibold text-white">{position}</div>
       </div>
+      <div className="text-[#F778BA] font-medium mb-4">{prize}</div>
+      <ul className="space-y-2">
+        {perks.map((perk, index) => (
+          <li key={index} className="text-[#8b949e] text-sm flex items-center gap-2">
+            <span className="w-1 h-1 rounded-full bg-[#F778BA]" />
+            {perk}
+          </li>
+        ))}
+      </ul>
     </div>
-  );
-}
-
-function ListItem({ children }: { children: React.ReactNode }) {
-  return (
-    <li className="flex items-center gap-2 text-[#8b949e]">
-      <div className="w-1.5 h-1.5 rounded-full bg-[#F778BA]" />
-      {children}
-    </li>
   );
 } 
