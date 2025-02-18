@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession } from "next-auth/react";
-import { ArrowLeft, Github, Terminal, Code, GitPullRequest, ExternalLink, Star, Trophy, Users } from "lucide-react";
+import { ArrowLeft, Github, Terminal, Code, GitPullRequest, ExternalLink, Star, Trophy, Users, GitBranch, Calendar } from "lucide-react";
 import Link from "next/link";
 import { SignInButton } from "@/components/sign-in-button";
 import { useEffect, useState } from "react";
@@ -29,6 +29,21 @@ type StarPosition = {
 
 type Contributor = {
   login: string;
+  name?: string;
+  avatar_url: string;
+  contributions: number;
+  html_url: string;
+};
+
+type GitHubMember = {
+  login: string;
+  id: number;
+  avatar_url: string;
+};
+
+type GitHubContributor = {
+  login: string;
+  id: number;
   avatar_url: string;
   contributions: number;
   html_url: string;
@@ -81,7 +96,7 @@ export default function SkillFest() {
         throw new Error(`GitHub API error: ${reposResponse.status}`);
       }
 
-      const repos = await reposResponse.json();
+      const repos: Array<{ name: string }> = await reposResponse.json();
       
       // Then, fetch issues from each repository
       const allIssuesPromises = repos.map(async (repo: { name: string }) => {
@@ -109,13 +124,34 @@ export default function SkillFest() {
       const flattenedIssues = allIssues.flat();
       setIssues(flattenedIssues);
     } catch (error) {
-      console.error('Error fetching issues:', error);
+      if (error instanceof Error) {
+        console.error('Error fetching issues:', error.message);
+      } else {
+        console.error('Error fetching issues:', error);
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const fetchContributors = async (token: string) => {
     try {
+      // First, get all members of the organization
+      const membersResponse = await fetch('https://api.github.com/orgs/nst-sdc/members', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github.v3+json',
+        },
+      });
+
+      if (!membersResponse.ok) {
+        throw new Error(`GitHub API error: ${membersResponse.status}`);
+      }
+
+      const members = await membersResponse.json() as GitHubMember[];
+      const memberLogins = new Set(members.map((member) => member.login));
+
+      // Then get repositories
       const reposResponse = await fetch('https://api.github.com/orgs/nst-sdc/repos', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -142,7 +178,11 @@ export default function SkillFest() {
         );
         
         if (contributorsResponse.ok) {
-          return await contributorsResponse.json();
+          const contributors = await contributorsResponse.json() as GitHubContributor[];
+          // Filter to only include org members
+          return contributors.filter((contributor: GitHubContributor) => 
+            memberLogins.has(contributor.login)
+          );
         }
         return [];
       });
@@ -152,7 +192,7 @@ export default function SkillFest() {
       // Combine and aggregate contributions
       const contributorMap = new Map<string, Contributor>();
       
-      allContributors.flat().forEach((contributor: Contributor) => {
+      allContributors.flat().forEach((contributor: GitHubContributor) => {
         if (contributorMap.has(contributor.login)) {
           const existing = contributorMap.get(contributor.login)!;
           existing.contributions += contributor.contributions;
@@ -166,10 +206,35 @@ export default function SkillFest() {
         }
       });
 
-      // Convert to array and sort by contributions
-      const sortedContributors = Array.from(contributorMap.values())
+      // After getting the contributors, fetch their full details
+      const contributorsWithDetails = await Promise.all(
+        Array.from(contributorMap.values()).map(async (contributor) => {
+          try {
+            const userResponse = await fetch(`https://api.github.com/users/${contributor.login}`, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/vnd.github.v3+json',
+              },
+            });
+            
+            if (userResponse.ok) {
+              const userData = await userResponse.json();
+              return {
+                ...contributor,
+                name: userData.name || contributor.login, // Fallback to login if name isn't set
+              };
+            }
+          } catch (error) {
+            console.error(`Error fetching user details for ${contributor.login}:`, error);
+          }
+          return contributor;
+        })
+      );
+
+      // Sort and set contributors
+      const sortedContributors = contributorsWithDetails
         .sort((a, b) => b.contributions - a.contributions)
-        .slice(0, 5); // Get top 5
+        .slice(0, 5);
 
       setContributors(sortedContributors);
     } catch (error) {
@@ -219,57 +284,118 @@ export default function SkillFest() {
             <h1 className="text-5xl font-bold mb-6 text-foreground bg-gradient-to-r from-[#238636] to-[#2ea043] text-transparent bg-clip-text">
               Welcome to SkillFest 2025
             </h1>
-            <p className="text-xl text-[#8b949e] max-w-2xl mx-auto">
-              Showcase your skills, contribute to open source, and join our development team
+            <p className="text-xl text-[#8b949e] max-w-2xl mx-auto mb-8">
+              Join our development team through a month-long open source contribution program
             </p>
-          </div>
 
-          <div className="mb-16">
-            <h2 className="text-2xl font-bold text-center text-white mb-8">Top Contributors</h2>
-            <div className="grid grid-cols-5 gap-4">
-              {contributors.map((contributor, index) => (
-                <a
-                  key={contributor.login}
-                  href={contributor.html_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group relative"
-                >
-                  <div className={`
-                    absolute -inset-0.5 bg-gradient-to-r 
-                    ${index === 0 ? 'from-yellow-400 to-yellow-600' : 
-                      index === 1 ? 'from-gray-300 to-gray-400' :
-                      index === 2 ? 'from-amber-700 to-amber-800' :
-                      'from-[#238636]/50 to-[#2ea043]/50'}
-                    rounded-lg opacity-75 group-hover:opacity-100 transition duration-200
-                    ${index === 0 ? 'animate-pulse' : ''}
-                  `} />
-                  <div className="relative p-4 bg-[#161b22] rounded-lg">
-                    <div className="flex flex-col items-center">
-                      <div className="relative">
-                        <Image 
+            {/* Contributors Showcase */}
+            <div className="relative mt-12 mb-8">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#238636]/5 to-transparent" />
+              <h3 className="text-lg font-medium text-[#8b949e] mb-6">Top Contributors</h3>
+              <div className="flex justify-center items-center gap-8">
+                {contributors.map((contributor, index) => (
+                  <a
+                    key={contributor.login}
+                    href={contributor.html_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group relative text-center w-24 flex flex-col items-center"
+                  >
+                    <div className="relative flex justify-center mb-4">
+                      <div 
+                        className={`absolute -inset-0.5 rounded-full blur-md transition duration-300 ${
+                          index === 0 
+                            ? 'bg-gradient-to-r from-yellow-500/50 via-[#238636]/50 to-[#2ea043]/50 group-hover:opacity-100 opacity-75' 
+                            : 'bg-gradient-to-r from-[#238636]/30 to-[#2ea043]/30 group-hover:opacity-75 opacity-50'
+                        }`}
+                      />
+                      <div className="relative flex justify-center">
+                        <Image
                           src={contributor.avatar_url}
-                          alt={contributor.login}
-                          width={40}
-                          height={40}
-                          className="rounded-full mb-2"
+                          alt={contributor.name || contributor.login}
+                          width={64}
+                          height={64}
+                          className={`rounded-full transition-all duration-300 transform group-hover:scale-110 ${
+                            index === 0 
+                              ? 'border-2 border-yellow-500 group-hover:border-yellow-400' 
+                              : 'border-2 border-[#238636] group-hover:border-[#2ea043]'
+                          }`}
                         />
                         {index === 0 && (
                           <div className="absolute -top-2 -right-2">
-                            <Trophy className="w-6 h-6 text-yellow-400" />
+                            <div className="relative">
+                              <div className="absolute inset-0 blur-sm bg-yellow-500/50 rounded-full" />
+                              <Trophy className="w-4 h-4 text-yellow-500 relative z-10" />
+                            </div>
                           </div>
                         )}
                       </div>
-                      <span className="text-white font-medium text-sm truncate max-w-full">
-                        {contributor.login}
-                      </span>
-                      <span className="text-[#8b949e] text-xs">
-                        {contributor.contributions} contributions
-                      </span>
                     </div>
-                  </div>
-                </a>
-              ))}
+
+                    {/* Permanent Name Display */}
+                    <div className="text-center w-full space-y-1">
+                      <p className={`text-sm font-medium truncate px-1 ${
+                        index === 0 ? 'text-yellow-500' : 'text-white'
+                      }`}>
+                        {contributor.name || contributor.login}
+                      </p>
+                      <p className="text-xs text-[#8b949e]">
+                        {contributor.contributions} commits
+                      </p>
+                    </div>
+
+                    {/* Hover Card */}
+                    <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap">
+                      <div className={`px-3 py-2 rounded-md bg-[#1f2428] border text-xs text-white ${
+                        index === 0 ? 'border-yellow-500/50' : 'border-[#30363d]'
+                      }`}>
+                        <p className="font-medium">@{contributor.login}</p>
+                        <p className={`text-xs ${index === 0 ? 'text-yellow-500' : 'text-[#8b949e]'}`}>
+                          View Profile
+                        </p>
+                      </div>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+            <div className="p-6 rounded-lg border border-[#30363d] bg-[#161b22] hover:border-[#238636] transition-all duration-300 group">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-lg bg-[#238636]/10 group-hover:scale-110 transition-transform duration-300">
+                  <GitBranch className="w-6 h-6 text-[#238636]" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-white mb-1">5</div>
+                  <div className="text-sm text-[#8b949e]">Developer Positions</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 rounded-lg border border-[#30363d] bg-[#161b22] hover:border-[#238636] transition-all duration-300 group">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-lg bg-[#238636]/10 group-hover:scale-110 transition-transform duration-300">
+                  <Code className="w-6 h-6 text-[#238636]" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-white mb-1">10+</div>
+                  <div className="text-sm text-[#8b949e]">Projects to Work On</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 rounded-lg border border-[#30363d] bg-[#161b22] hover:border-[#238636] transition-all duration-300 group">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-lg bg-[#238636]/10 group-hover:scale-110 transition-transform duration-300">
+                  <Calendar className="w-6 h-6 text-[#238636]" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-white mb-1">30</div>
+                  <div className="text-sm text-[#8b949e]">Days Challenge</div>
+                </div>
+              </div>
             </div>
           </div>
 

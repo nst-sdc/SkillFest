@@ -1,7 +1,7 @@
 'use client';
 
 import { SignInButton } from "@/components/sign-in-button";
-import { ArrowRight, Code, Palette, Sparkles, Zap } from "lucide-react";
+import { ArrowRight, Code, Palette, Sparkles, Zap, Trophy, Users, GitBranch, Star } from "lucide-react";
 import Link from "next/link";
 import { useState } from 'react';
 import { useSession } from "next-auth/react";
@@ -16,7 +16,7 @@ export default function Home() {
         <div className="text-center mb-20 space-y-6">
           <div className="inline-block">
             <span className="bg-[#238636] text-white text-sm font-medium px-4 py-1.5 rounded-full">
-              Recruitment Open 2025
+              SkillFest 2025 is Live 🚀
             </span>
           </div>
           <h1 className="text-5xl md:text-7xl font-bold mb-4 text-foreground">
@@ -25,9 +25,45 @@ export default function Home() {
           <p className="text-xl text-[#8b949e] max-w-2xl mx-auto">
             Join our elite team of developers, designers, and creators
           </p>
+
+          {/* New: Quick Info Cards */}
+          <div className="flex flex-wrap justify-center gap-4 mt-8">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#161b22] border border-[#30363d]">
+              <GitBranch className="w-4 h-4 text-[#238636]" />
+              <span className="text-[#8b949e]">30 Days Challenge</span>
+            </div>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#161b22] border border-[#30363d]">
+              <Users className="w-4 h-4 text-[#238636]" />
+              <span className="text-[#8b949e]">10 Team Positions</span>
+            </div>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#161b22] border border-[#30363d]">
+              <Trophy className="w-4 h-4 text-[#238636]" />
+              <span className="text-[#8b949e]">Direct Team Entry</span>
+            </div>
+          </div>
           
-          <div className="flex justify-center mt-8">
+          {/* New: How to Apply Section */}
+          <div className="mt-8 inline-block text-center p-4 rounded-lg bg-[#161b22] border border-[#30363d]">
+            <p className="text-[#8b949e] mb-4">
+              👉 Sign in with GitHub and choose &quot;Developer&quot; to join SkillFest
+            </p>
             <SignInButton />
+          </div>
+
+          {/* New: Quick Steps */}
+          <div className="flex flex-wrap justify-center gap-8 mt-8">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-[#238636]/10 flex items-center justify-center text-[#238636] font-medium">1</div>
+              <span className="text-[#8b949e]">Sign in</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-[#238636]/10 flex items-center justify-center text-[#238636] font-medium">2</div>
+              <span className="text-[#8b949e]">Select Developer</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-[#238636]/10 flex items-center justify-center text-[#238636] font-medium">3</div>
+              <span className="text-[#8b949e]">Start Contributing</span>
+            </div>
           </div>
         </div>
 
@@ -55,24 +91,155 @@ export default function Home() {
           />
         </div>
 
-        <div className="mt-20 text-center">
-          <h2 className="text-3xl font-bold mb-4 text-foreground">Selection Process</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto mt-10">
-            <StepCard 
-              step="01"
-              title="Apply"
-              description="Sign up and choose your role"
-            />
-            <StepCard 
-              step="02"
-              title="Interview"
-              description="Show us your skills and passion"
-            />
-            <StepCard 
-              step="03"
-              title="Join the Team"
-              description="Start creating amazing things"
-            />
+        <div className="mt-32 max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <span className="inline-block px-4 py-1.5 bg-[#238636]/10 text-[#238636] rounded-full text-sm font-medium mb-4">
+              About SkillFest
+            </span>
+            <h2 className="text-4xl font-bold mb-4 text-foreground bg-gradient-to-r from-[#238636] to-[#2ea043] text-transparent bg-clip-text">
+              What is SkillFest?
+            </h2>
+            <p className="text-xl text-[#8b949e] max-w-2xl mx-auto">
+              A month-long open source contribution program to showcase your skills and join our development team
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+            <div className="p-6 rounded-lg border border-[#30363d] bg-[#161b22] hover:border-[#238636] transition-all duration-300 group">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-lg bg-[#238636]/10 group-hover:scale-110 transition-transform duration-300">
+                  <GitBranch className="w-6 h-6 text-[#238636]" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-white mb-1">20+</div>
+                  <div className="text-sm text-[#8b949e]">Projects</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 rounded-lg border border-[#30363d] bg-[#161b22] hover:border-[#238636] transition-all duration-300 group">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-lg bg-[#238636]/10 group-hover:scale-110 transition-transform duration-300">
+                  <Users className="w-6 h-6 text-[#238636]" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-white mb-1">30</div>
+                  <div className="text-sm text-[#8b949e]">Days Challenge</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 rounded-lg border border-[#30363d] bg-[#161b22] hover:border-[#238636] transition-all duration-300 group">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-lg bg-[#238636]/10 group-hover:scale-110 transition-transform duration-300">
+                  <Trophy className="w-6 h-6 text-[#238636]" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-white mb-1">10</div>
+                  <div className="text-sm text-[#8b949e]">Team Positions</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 rounded-lg border border-[#30363d] bg-[#161b22] hover:border-[#238636] transition-all duration-300 group">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-lg bg-[#238636]/10 group-hover:scale-110 transition-transform duration-300">
+                  <Star className="w-6 h-6 text-[#238636]" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-white mb-1">100+</div>
+                  <div className="text-sm text-[#8b949e]">Contributors</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
+            <div className="p-6 rounded-lg border border-[#30363d] bg-[#161b22] hover:border-[#238636] transition-all duration-300 group">
+              <div className="p-3 rounded-lg bg-[#238636]/10 w-fit mb-4 group-hover:scale-110 transition-transform duration-300">
+                <Code className="w-6 h-6 text-[#238636]" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Real Projects</h3>
+              <p className="text-[#8b949e] group-hover:text-white transition-colors duration-300">
+                Work on actual projects that impact thousands of users. Build your portfolio while making a difference.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-lg border border-[#30363d] bg-[#161b22] hover:border-[#238636] transition-all duration-300 group">
+              <div className="p-3 rounded-lg bg-[#238636]/10 w-fit mb-4 group-hover:scale-110 transition-transform duration-300">
+                <Users className="w-6 h-6 text-[#238636]" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Expert Mentorship</h3>
+              <p className="text-[#8b949e] group-hover:text-white transition-colors duration-300">
+                Get guidance from experienced developers and industry professionals throughout your journey.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-lg border border-[#30363d] bg-[#161b22] hover:border-[#238636] transition-all duration-300 group">
+              <div className="p-3 rounded-lg bg-[#238636]/10 w-fit mb-4 group-hover:scale-110 transition-transform duration-300">
+                <Trophy className="w-6 h-6 text-[#238636]" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Team Membership</h3>
+              <p className="text-[#8b949e] group-hover:text-white transition-colors duration-300">
+                Top performers get direct entry into the NST SDC team with exciting roles and responsibilities.
+              </p>
+            </div>
+          </div>
+
+          <div className="max-w-4xl mx-auto mt-24 relative">
+            <div className="absolute left-1/2 transform -translate-x-1/2 h-full w-px bg-[#30363d]" />
+            <div className="space-y-16 relative">
+              <div className="flex items-center gap-8">
+                <div className="w-1/2 text-right">
+                  <div className="bg-[#161b22] p-6 rounded-lg border border-[#30363d] hover:border-[#238636] transition-all duration-300 group">
+                    <div className="text-sm font-mono text-[#238636] mb-2">March 1</div>
+                    <h3 className="text-lg font-bold text-white mb-2">Registration Opens</h3>
+                    <p className="text-[#8b949e] group-hover:text-white transition-colors duration-300">
+                      Sign up and choose your track - Developer or Creative Lead
+                    </p>
+                  </div>
+                </div>
+                <div className="relative">
+                  <div className="w-4 h-4 rounded-full bg-[#238636] absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+                  <div className="w-6 h-6 rounded-full bg-[#238636]/30 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-ping" />
+                </div>
+                <div className="w-1/2" />
+              </div>
+
+              <div className="flex items-center gap-8 flex-row-reverse">
+                <div className="w-1/2">
+                  <div className="bg-[#161b22] p-6 rounded-lg border border-[#30363d] hover:border-[#238636] transition-all duration-300 group">
+                    <div className="text-sm font-mono text-[#238636] mb-2">March 15</div>
+                    <h3 className="text-lg font-bold text-white mb-2">Contribution Phase</h3>
+                    <p className="text-[#8b949e] group-hover:text-white transition-colors duration-300">
+                      Start working on issues and submitting pull requests
+                    </p>
+                  </div>
+                </div>
+                <div className="relative">
+                  <div className="w-4 h-4 rounded-full bg-[#238636] absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+                  <div className="w-6 h-6 rounded-full bg-[#238636]/30 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-ping" />
+                </div>
+                <div className="w-1/2" />
+              </div>
+
+              <div className="flex items-center gap-8">
+                <div className="w-1/2 text-right">
+                  <div className="bg-[#161b22] p-6 rounded-lg border border-[#30363d] hover:border-[#238636] transition-all duration-300 group">
+                    <div className="text-sm font-mono text-[#238636] mb-2">April 15</div>
+                    <h3 className="text-lg font-bold text-white mb-2">Final Evaluation</h3>
+                    <p className="text-[#8b949e] group-hover:text-white transition-colors duration-300">
+                      Top contributors will be selected for the team
+                    </p>
+                  </div>
+                </div>
+                <div className="relative">
+                  <div className="w-4 h-4 rounded-full bg-[#238636] absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+                  <div className="w-6 h-6 rounded-full bg-[#238636]/30 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-ping" />
+                </div>
+                <div className="w-1/2" />
+              </div>
+            </div>
           </div>
         </div>
       </main>
@@ -163,16 +330,6 @@ function CategoryCard({
 
         {showLoginPopup && <LoginPopup onClose={() => setShowLoginPopup(false)} />}
       </div>
-    </div>
-  );
-}
-
-function StepCard({ step, title, description }: { step: string; title: string; description: string }) {
-  return (
-    <div className="p-6 rounded-lg border border-[#30363d] bg-[#161b22]">
-      <div className="text-sm font-mono text-[#238636] mb-2">{step}</div>
-      <h3 className="text-lg font-semibold mb-2 text-white">{title}</h3>
-      <p className="text-[#8b949e] text-sm">{description}</p>
     </div>
   );
 }
