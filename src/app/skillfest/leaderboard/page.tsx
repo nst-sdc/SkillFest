@@ -13,48 +13,42 @@ type Contributor = {
   html_url: string;
   rank?: number;
   hasLoggedIn?: boolean;
-};
-
-type LoggedInUser = {
-  login: string;
+  pullRequests: {
+    total: number;
+    merged: number;
+  };
 };
 
 export default function Leaderboard() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [contributors, setContributors] = useState<Contributor[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (session?.accessToken) {
-      fetchContributors(session.accessToken);
-    }
-  }, [session]);
+    if (status === 'authenticated' && session?.accessToken) {
+      fetchAllLoggedInUsers(session.accessToken);
 
-  const fetchContributors = async (token: string) => {
+      // Set up polling every 30 seconds
+      const interval = setInterval(() => {
+        if (session.accessToken) {
+          fetchAllLoggedInUsers(session.accessToken);
+        }
+      }, 30000);
+
+      return () => clearInterval(interval);
+    }
+  }, [status, session]);
+
+  const fetchAllLoggedInUsers = async (token: string) => {
     setLoading(true);
     try {
-      // First, fetch logged-in users from your database/API
-      const loggedInUsersResponse = await fetch('/api/logged-in-users');
-      const loggedInUsers = await loggedInUsersResponse.json();
-      const loggedInUsernames = new Set(loggedInUsers.map((user: LoggedInUser) => user.login?.toLowerCase()));
+      // Get active users
+      const loggedInResponse = await fetch('/api/logged-in-users');
+      if (!loggedInResponse.ok) throw new Error('Failed to fetch logged-in users');
+      const loggedInUsers = await loggedInResponse.json();
+      console.log('Active users:', loggedInUsers);
 
-      // Fetch organization members
-      const orgMembersResponse = await fetch('https://api.github.com/orgs/nst-sdc/members', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/vnd.github.v3+json',
-        },
-      });
-
-      if (!orgMembersResponse.ok) {
-        throw new Error(`GitHub API error: ${orgMembersResponse.status}`);
-      }
-
-      const orgMembers = await orgMembersResponse.json();
-      const orgMemberUsernames = new Set(orgMembers.map((member: { login: string }) => 
-        member.login.toLowerCase()
-      ));
-
+      // Fetch repos
       const reposResponse = await fetch('https://api.github.com/orgs/nst-sdc/repos', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -62,59 +56,114 @@ export default function Leaderboard() {
         },
       });
 
-      if (!reposResponse.ok) throw new Error(`GitHub API error: ${reposResponse.status}`);
-
+      if (!reposResponse.ok) throw new Error('Failed to fetch repos');
       const repos = await reposResponse.json();
-      const allContributorsPromises = repos.map(async (repo: { name: string }) => {
-        const contributorsResponse = await fetch(
-          `https://api.github.com/repos/nst-sdc/${repo.name}/contributors`,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Accept': 'application/vnd.github.v3+json',
-            },
-          }
-        );
-        
-        if (contributorsResponse.ok) {
-          return await contributorsResponse.json();
-        }
-        return [];
-      });
 
-      const allContributors = await Promise.all(allContributorsPromises);
-      const contributorMap = new Map<string, Contributor>();
-      
-      allContributors.flat().forEach((contributor: Contributor) => {
-        const login = contributor.login.toLowerCase();
-        // Only include contributors who are org members
-        if (orgMemberUsernames.has(login)) {
-          if (contributorMap.has(login)) {
-            const existing = contributorMap.get(login)!;
-            existing.contributions += contributor.contributions;
-          } else {
-            contributorMap.set(login, {
-              login: contributor.login,
-              avatar_url: contributor.avatar_url,
-              contributions: contributor.contributions,
-              html_url: contributor.html_url,
-              hasLoggedIn: loggedInUsernames.has(login)
+      // Create a map to store all contributions
+      const contributionsMap = new Map<string, Contributor>();
+
+      // Initialize map with active users
+      for (const user of loggedInUsers) {
+        contributionsMap.set(user.login.toLowerCase(), {
+          login: user.login,
+          avatar_url: `https://avatars.githubusercontent.com/${user.login}`,
+          contributions: 0,
+          html_url: `https://github.com/${user.login}`,
+          hasLoggedIn: true,
+          pullRequests: {
+            total: 0,
+            merged: 0
+          }
+        });
+      }
+
+      // Fetch all PRs from the organization in one request
+      const orgPRsResponse = await fetch(
+        'https://api.github.com/search/issues?q=type:pr+org:nst-sdc',
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/vnd.github.v3+json',
+          },
+        }
+      );
+
+      if (orgPRsResponse.ok) {
+        const { items: prs } = await orgPRsResponse.json();
+        
+        // Process PRs for each user
+        prs.forEach((pr: { 
+          user: { login: string }, 
+          pull_request: { merged_at: string | null } 
+        }) => {
+          const login = pr.user.login.toLowerCase();
+          if (contributionsMap.has(login)) {
+            const existing = contributionsMap.get(login)!;
+            contributionsMap.set(login, {
+              ...existing,
+              pullRequests: {
+                total: existing.pullRequests.total + 1,
+                merged: existing.pullRequests.merged + (pr.pull_request.merged_at ? 1 : 0)
+              }
             });
           }
-        }
-      });
+        });
+      }
 
-      // Sort contributors by contributions
-      const sortedContributors = Array.from(contributorMap.values())
+      // Fetch contributions for each repo
+      await Promise.all(repos.map(async (repo: { name: string }) => {
+        try {
+          const contributorsResponse = await fetch(
+            `https://api.github.com/repos/nst-sdc/${repo.name}/stats/contributors`,
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/vnd.github.v3+json',
+              },
+            }
+          );
+
+          if (contributorsResponse.ok) {
+            const repoContributors = await contributorsResponse.json();
+            if (Array.isArray(repoContributors)) {
+              repoContributors.forEach((contributor: {
+                author: {
+                  login: string;
+                  avatar_url: string;
+                } | null;
+                total: number;
+              }) => {
+                if (contributor.author) {
+                  const login = contributor.author.login.toLowerCase();
+                  if (contributionsMap.has(login)) {
+                    const existing = contributionsMap.get(login)!;
+                    contributionsMap.set(login, {
+                      ...existing,
+                      contributions: existing.contributions + contributor.total,
+                      avatar_url: contributor.author.avatar_url || existing.avatar_url,
+                    });
+                  }
+                }
+              });
+            }
+          }
+        } catch (error) {
+          console.error(`Error fetching data for ${repo.name}:`, error);
+        }
+      }));
+
+      // Convert to array, sort, and add ranks
+      const sortedContributors = Array.from(contributionsMap.values())
         .sort((a, b) => b.contributions - a.contributions)
         .map((contributor, index) => ({
           ...contributor,
           rank: index + 1
         }));
 
+      console.log('Final contributors:', sortedContributors);
       setContributors(sortedContributors);
     } catch (error) {
-      console.error('Error fetching contributors:', error);
+      console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
@@ -189,9 +238,15 @@ export default function Leaderboard() {
                               <Trophy className="w-4 h-4 text-yellow-400" />
                             )}
                           </div>
-                          <div className="flex items-center gap-2 text-sm text-[#8b949e]">
-                            <GitPullRequest className="w-4 h-4" />
-                            <span>{contributor.contributions} contributions</span>
+                          <div className="flex items-center gap-4 text-sm text-[#8b949e]">
+                            <div className="flex items-center gap-1">
+                              <GitPullRequest className="w-4 h-4" />
+                              <span>{contributor.pullRequests.merged}/{contributor.pullRequests.total} PRs</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Star className="w-4 h-4" />
+                              <span>{contributor.contributions} contributions</span>
+                            </div>
                           </div>
                         </div>
                         <div className="text-right">

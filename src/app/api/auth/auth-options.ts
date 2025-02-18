@@ -1,28 +1,21 @@
 import GithubProvider from "next-auth/providers/github";
-import { JWT } from "next-auth/jwt";
-import { Account, Session } from "next-auth";
+import type { AuthOptions } from "next-auth";
 
-// Extend the built-in session and JWT types
+// Extend the built-in session type
 declare module "next-auth" {
   interface Session {
     accessToken?: string;
   }
 }
 
-declare module "next-auth/jwt" {
-  interface JWT {
-    accessToken?: string;
-  }
-}
-
-export const authOptions = {
+export const authOptions: AuthOptions = {
   providers: [
     GithubProvider({
       clientId: process.env.GITHUB_ID!,
       clientSecret: process.env.GITHUB_SECRET!,
       authorization: {
         params: {
-          scope: 'read:user user:email repo read:org',
+          scope: 'read:user user:email repo',
         },
       },
     }),
@@ -33,17 +26,25 @@ export const authOptions = {
     error: '/error',
   },
   callbacks: {
-    async jwt({ token, account }: { token: JWT, account: Account | null }) {
-      if (account) {
+    async jwt({ token, account }) {
+      if (account?.access_token) {
         token.accessToken = account.access_token;
       }
       return token;
     },
-    async session({ session, token }: { session: Session, token: JWT }) {
-      if (token) {
-        session.accessToken = token.accessToken;
-      }
+    async session({ session, token }) {
+      session.accessToken = token.accessToken as string;
       return session;
+    },
+    async signIn() {
+      try {
+        // Record the login
+        await fetch('/api/logged-in-users', { method: 'POST' });
+        return true;
+      } catch (error) {
+        console.error('Error recording login:', error);
+        return true; // Still allow sign in
+      }
     },
   },
   debug: true,
