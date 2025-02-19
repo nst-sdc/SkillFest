@@ -199,7 +199,12 @@ export async function POST() {
     console.log("Attempting to update Firebase with stats:", userStats);
     
     // Add user to Firebase with stats
-    const dbUpdateResult = await addUserToDatabase(githubUser.id.toString(), userStats);
+
+
+
+    // const dbUpdateResult = await addUserToDatabase(githubUser.id.toString(), userStats);
+
+    const dbUpdateResult = await addUserToDatabase(githubUser.login, userStats);
     console.log("Firebase update result:", dbUpdateResult);
     
     if (!dbUpdateResult) {
