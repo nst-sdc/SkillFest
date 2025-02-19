@@ -3,19 +3,29 @@
 import { useSession } from "next-auth/react";
 import { ArrowLeft, Trophy, GitPullRequest, Star } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Image from 'next/image';
 
 type Contributor = {
   login: string;
   avatar_url: string;
-  contributions: number;
   html_url: string;
   rank?: number;
   hasLoggedIn?: boolean;
+  contributions?: number;
   pullRequests: {
     total: number;
     merged: number;
+  };
+};
+
+// Add types for the API response
+type UserResponse = {
+  login: string;
+  stats: {
+    totalPRs: number;
+    mergedPRs: number;
+    contributions: number;
   };
 };
 
@@ -23,151 +33,87 @@ export default function Leaderboard() {
   const { data: session, status } = useSession();
   const [contributors, setContributors] = useState<Contributor[]>([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchAllLoggedInUsers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/logged-in-users');
+      if (!response.ok) throw new Error('Failed to fetch users');
+      
+      const users = (await response.json()) as UserResponse[];
+      
+      // Sort users by merged PRs first, then total PRs
+      const sortedUsers = users.sort((a, b) => {
+        if (b.stats.mergedPRs !== a.stats.mergedPRs) {
+          return b.stats.mergedPRs - a.stats.mergedPRs;
+        }
+        return b.stats.totalPRs - a.stats.totalPRs;
+      });
+
+      // Add ranks and use avatars.githubusercontent.com for images
+      const rankedUsers = sortedUsers.map((user, index: number) => ({
+        login: user.login,
+        avatar_url: `https://avatars.githubusercontent.com/${user.login}`,
+        html_url: `https://github.com/${user.login}`,
+        rank: index + 1,
+        hasLoggedIn: true,
+        contributions: user.stats.contributions,
+        pullRequests: {
+          total: user.stats.totalPRs,
+          merged: user.stats.mergedPRs,
+        }
+      }));
+
+      setContributors(rankedUsers);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const refreshUserStats = useCallback(async () => {
+    if (!session?.accessToken) return;
+    
+    setRefreshing(true);
+    try {
+      // Force refresh stats from GitHub
+      const response = await fetch('/api/logged-in-users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to refresh stats');
+      }
+    
+      // Fetch updated data
+      await fetchAllLoggedInUsers();
+    } catch (error) {
+      console.error('Error refreshing stats:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [session?.accessToken, fetchAllLoggedInUsers]);
 
   useEffect(() => {
     if (status === 'authenticated' && session?.accessToken) {
-      fetchAllLoggedInUsers(session.accessToken);
+      refreshUserStats();
+      fetchAllLoggedInUsers();
 
-      // Set up polling every 30 seconds
       const interval = setInterval(() => {
-        if (session.accessToken) {
-          fetchAllLoggedInUsers(session.accessToken);
+        if (session?.accessToken) {
+          refreshUserStats();
+          fetchAllLoggedInUsers();
         }
       }, 30000);
 
       return () => clearInterval(interval);
     }
-  }, [status, session]);
-
-  const fetchAllLoggedInUsers = async (token: string) => {
-    setLoading(true);
-    try {
-      // Get active users
-      const loggedInResponse = await fetch('/api/logged-in-users');
-      if (!loggedInResponse.ok) throw new Error('Failed to fetch logged-in users');
-      const loggedInUsers = await loggedInResponse.json();
-      console.log('Active users:', loggedInUsers);
-
-      // Fetch repos
-      const reposResponse = await fetch('https://api.github.com/orgs/nst-sdc/repos', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/vnd.github.v3+json',
-        },
-      });
-
-      if (!reposResponse.ok) throw new Error('Failed to fetch repos');
-      const repos = await reposResponse.json();
-
-      // Create a map to store all contributions
-      const contributionsMap = new Map<string, Contributor>();
-
-      // Initialize map with active users
-      for (const user of loggedInUsers) {
-        contributionsMap.set(user.login.toLowerCase(), {
-          login: user.login,
-          avatar_url: `https://avatars.githubusercontent.com/${user.login}`,
-          contributions: 0,
-          html_url: `https://github.com/${user.login}`,
-          hasLoggedIn: true,
-          pullRequests: {
-            total: 0,
-            merged: 0
-          }
-        });
-      }
-
-      // Fetch all PRs from the organization in one request
-      const orgPRsResponse = await fetch(
-        'https://api.github.com/search/issues?q=type:pr+org:nst-sdc',
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/vnd.github.v3+json',
-          },
-        }
-      );
-
-      if (orgPRsResponse.ok) {
-        const { items: prs } = await orgPRsResponse.json();
-        
-        // Process PRs for each user
-        prs.forEach((pr: { 
-          user: { login: string }, 
-          pull_request: { merged_at: string | null } 
-        }) => {
-          const login = pr.user.login.toLowerCase();
-          if (contributionsMap.has(login)) {
-            const existing = contributionsMap.get(login)!;
-            contributionsMap.set(login, {
-              ...existing,
-              pullRequests: {
-                total: existing.pullRequests.total + 1,
-                merged: existing.pullRequests.merged + (pr.pull_request.merged_at ? 1 : 0)
-              }
-            });
-          }
-        });
-      }
-
-      // Fetch contributions for each repo
-      await Promise.all(repos.map(async (repo: { name: string }) => {
-        try {
-          const contributorsResponse = await fetch(
-            `https://api.github.com/repos/nst-sdc/${repo.name}/stats/contributors`,
-            {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Accept': 'application/vnd.github.v3+json',
-              },
-            }
-          );
-
-          if (contributorsResponse.ok) {
-            const repoContributors = await contributorsResponse.json();
-            if (Array.isArray(repoContributors)) {
-              repoContributors.forEach((contributor: {
-                author: {
-                  login: string;
-                  avatar_url: string;
-                } | null;
-                total: number;
-              }) => {
-                if (contributor.author) {
-                  const login = contributor.author.login.toLowerCase();
-                  if (contributionsMap.has(login)) {
-                    const existing = contributionsMap.get(login)!;
-                    contributionsMap.set(login, {
-                      ...existing,
-                      contributions: existing.contributions + contributor.total,
-                      avatar_url: contributor.author.avatar_url || existing.avatar_url,
-                    });
-                  }
-                }
-              });
-            }
-          }
-        } catch (error) {
-          console.error(`Error fetching data for ${repo.name}:`, error);
-        }
-      }));
-
-      // Convert to array, sort, and add ranks
-      const sortedContributors = Array.from(contributionsMap.values())
-        .sort((a, b) => b.contributions - a.contributions)
-        .map((contributor, index) => ({
-          ...contributor,
-          rank: index + 1
-        }));
-
-      console.log('Final contributors:', sortedContributors);
-      setContributors(sortedContributors);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [status, session, refreshUserStats, fetchAllLoggedInUsers]);
 
   const getPositionStyle = (rank: number) => {
     switch(rank) {
@@ -179,16 +125,39 @@ export default function Leaderboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#0d1117]">
       <div className="absolute inset-0 bg-grid-pattern opacity-[0.15]" />
       
       <main className="container mx-auto px-4 py-16 relative z-10">
-        <Link 
-          href="/skillfest"
-          className="inline-flex items-center gap-2 text-[#8b949e] hover:text-white transition-colors mb-8"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back to SkillFest
-        </Link>
+        <div className="mb-8 flex items-center justify-between">
+          <Link 
+            href="/skillfest"
+            className="inline-flex items-center gap-2 text-[#8b949e] hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span>Back to SkillFest</span>
+          </Link>
+          
+          <button
+            onClick={refreshUserStats}
+            disabled={refreshing}
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#238636]/10 text-[#238636] hover:bg-[#238636]/20 transition-colors disabled:opacity-50"
+          >
+            {refreshing ? (
+              <>
+                <div className="w-4 h-4 border-2 border-[#238636] border-t-transparent rounded-full animate-spin" />
+                <span>Refreshing...</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+                <span>Refresh Stats</span>
+              </>
+            )}
+          </button>
+        </div>
 
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
