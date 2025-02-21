@@ -37,18 +37,26 @@ export default function SkillFest() {
   useEffect(() => {
     if (session?.accessToken) {
       fetchIssues(session.accessToken);
+      
+      // Set up periodic refresh every 30 seconds
+      const refreshInterval = setInterval(() => {
+        fetchIssues(session.accessToken!);
+      }, 30000);
+
+      return () => clearInterval(refreshInterval);
     }
   }, [session]);
 
   const fetchIssues = async (token: string) => {
     setLoading(true);
     try {
-      // First, get all repositories from the organization
-      const reposResponse = await fetch('https://api.github.com/orgs/nst-sdc/repos', {
+      // First, get all repositories (both public and private)
+      const reposResponse = await fetch('https://api.github.com/orgs/nst-sdc/repos?type=all&per_page=100', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/vnd.github.v3+json',
         },
+        cache: 'no-store',
       });
 
       if (!reposResponse.ok) {
@@ -56,15 +64,17 @@ export default function SkillFest() {
       }
 
       const repos: Array<{ name: string }> = await reposResponse.json();
+      console.log('Found repositories:', repos.map(r => r.name)); // Debug log
       
       // Then, fetch issues from each repository
       const allIssuesPromises = repos.map(async (repo: { name: string }) => {
         const issuesResponse = await fetch(
-          `https://api.github.com/repos/nst-sdc/${repo.name}/issues?state=open`, {
+          `https://api.github.com/repos/nst-sdc/${repo.name}/issues?state=open&per_page=100&sort=created&direction=desc`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Accept': 'application/vnd.github.v3+json',
           },
+          cache: 'no-store',
         });
         
         if (issuesResponse.ok) {
@@ -76,18 +86,16 @@ export default function SkillFest() {
             },
           }));
         }
+        console.error(`Failed to fetch issues for ${repo.name}:`, issuesResponse.status);
         return [];
       });
 
       const allIssues = await Promise.all(allIssuesPromises);
       const flattenedIssues = allIssues.flat();
+      console.log('Total issues found:', flattenedIssues.length); // Debug log
       setIssues(flattenedIssues);
     } catch (error) {
-      if (error instanceof Error) {
-        console.error('Error fetching issues:', error.message);
-      } else {
-        console.error('Error fetching issues:', error);
-      }
+      console.error('Error fetching issues:', error);
     } finally {
       setLoading(false);
     }

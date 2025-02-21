@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useState } from 'react';
 import { useSession } from "next-auth/react";
 import { LoginPopup } from "@/components/login-popup";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
   return (
@@ -247,6 +248,38 @@ export default function Home() {
   );
 }
 
+function ApplyLoadingScreen() {
+  return (
+    <div className="fixed inset-0 bg-[#0d1117]/80 backdrop-blur-sm z-50 flex items-center justify-center">
+      <div className="relative">
+        <div className="absolute inset-0 bg-[#238636]/20 rounded-full blur-[100px] animate-pulse" />
+        
+        <div className="relative bg-[#161b22] border border-[#30363d] rounded-xl p-12">
+          <div className="flex flex-col items-center gap-6">
+            <div className="relative">
+              <div className="absolute inset-0 bg-[#238636]/20 rounded-full blur-xl animate-pulse" />
+              <div className="relative bg-[#161b22] p-4 rounded-full border-2 border-[#238636]">
+                <Code className="w-12 h-12 text-[#238636]" />
+              </div>
+            </div>
+
+            <div className="text-center">
+              <h3 className="text-xl font-bold text-white mb-2">Setting up your workspace</h3>
+              <p className="text-[#8b949e]">Preparing your development environment</p>
+            </div>
+
+            <div className="flex gap-2">
+              <div className="w-2 h-2 rounded-full bg-[#238636] animate-bounce" style={{ animationDelay: '0ms' }} />
+              <div className="w-2 h-2 rounded-full bg-[#238636] animate-bounce" style={{ animationDelay: '150ms' }} />
+              <div className="w-2 h-2 rounded-full bg-[#238636] animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CategoryCard({ 
   title, 
   description, 
@@ -261,11 +294,22 @@ function CategoryCard({
   const { data: session } = useSession();
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [showLoading, setShowLoading] = useState(false);
+  const router = useRouter();
 
   const handleClick = (e: React.MouseEvent) => {
     if (!session) {
       e.preventDefault();
       setShowLoginPopup(true);
+      return;
+    }
+
+    if (title === "Developer") {
+      e.preventDefault();
+      setShowLoading(true);
+      setTimeout(() => {
+        router.push('/skillfest');
+      }, 2000);
     }
   };
 
@@ -329,6 +373,8 @@ function CategoryCard({
         </Link>
 
         {showLoginPopup && <LoginPopup onClose={() => setShowLoginPopup(false)} />}
+
+        {showLoading && <ApplyLoadingScreen />}
       </div>
     </div>
   );
