@@ -33,23 +33,10 @@ type WeeklyStats = {
 };
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
-    // Get all active users from Firebase
     const activeUsers = await getActiveUsers();
-    
-    // Filter out inactive users (older than 24 hours)
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const filteredUsers = activeUsers.filter(user => 
-      user.lastActive > twentyFourHoursAgo
-    );
-
-    return NextResponse.json(filteredUsers);
+    // Return all users without filtering
+    return NextResponse.json(activeUsers);
   } catch (error) {
     console.error('Error fetching users:', error);
     return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });

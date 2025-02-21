@@ -107,6 +107,7 @@ export const getActiveUsers = async () => {
         }
       }));
     }
+    console.log('No users found in Firebase');
     return [];
   } catch (error) {
     console.error('Error fetching users from database:', error);
