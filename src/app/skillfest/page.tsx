@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession } from "next-auth/react";
-import { ArrowLeft, Github, Code, GitPullRequest, ExternalLink, Trophy, Users, Calendar } from "lucide-react";
+import { ArrowLeft, Github, Code, GitPullRequest, ExternalLink, Trophy } from "lucide-react";
 import Link from "next/link";
 import { SignInButton } from "@/components/sign-in-button";
 import { useEffect, useState } from "react";
@@ -179,59 +179,6 @@ export default function SkillFest() {
               <ArrowLeft className="w-6 h-6 text-[#238636] rotate-180 group-hover:translate-x-2 transition-transform" />
             </div>
           </Link>
-        </div>
-
-        {/* Stats Section with hexagon design */}
-        <div className="mb-24">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Position Stats */}
-            <div className="group relative bg-[#161b22] border border-[#30363d] rounded-lg p-8 hover:border-[#238636] transition-all duration-300">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[#238636]/5 rounded-full blur-3xl group-hover:bg-[#238636]/10 transition-all duration-500" />
-              <div className="relative flex items-center gap-6">
-                <div className="flex-shrink-0">
-                  <div className="w-16 h-16 flex items-center justify-center rounded-lg bg-[#238636]/10 group-hover:scale-110 transition-transform duration-300">
-                    <Users className="w-8 h-8 text-[#238636]" />
-                  </div>
-                </div>
-                <div>
-                  <div className="text-5xl font-bold text-white mb-2">15</div>
-                  <div className="text-[#8b949e]">Developer Positions</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Issues Stats */}
-            <div className="group relative bg-[#161b22] border border-[#30363d] rounded-lg p-8 hover:border-[#238636] transition-all duration-300">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[#238636]/5 rounded-full blur-3xl group-hover:bg-[#238636]/10 transition-all duration-500" />
-              <div className="relative flex items-center gap-6">
-                <div className="flex-shrink-0">
-                  <div className="w-16 h-16 flex items-center justify-center rounded-lg bg-[#238636]/10 group-hover:scale-110 transition-transform duration-300">
-                    <GitPullRequest className="w-8 h-8 text-[#238636]" />
-                  </div>
-                </div>
-                <div>
-                  <div className="text-5xl font-bold text-white mb-2">{issues.length}</div>
-                  <div className="text-[#8b949e]">Open Challenges</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Days Stats */}
-            <div className="group relative bg-[#161b22] border border-[#30363d] rounded-lg p-8 hover:border-[#238636] transition-all duration-300">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[#238636]/5 rounded-full blur-3xl group-hover:bg-[#238636]/10 transition-all duration-500" />
-              <div className="relative flex items-center gap-6">
-                <div className="flex-shrink-0">
-                  <div className="w-16 h-16 flex items-center justify-center rounded-lg bg-[#238636]/10 group-hover:scale-110 transition-transform duration-300">
-                    <Calendar className="w-8 h-8 text-[#238636]" />
-                  </div>
-                </div>
-                <div>
-                  <div className="text-5xl font-bold text-white mb-2">30</div>
-                  <div className="text-[#8b949e]">Days Challenge</div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Leaderboard Preview */}

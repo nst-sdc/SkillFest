@@ -1,7 +1,7 @@
 'use client';
 
 import { SignInButton } from "@/components/sign-in-button";
-import { ArrowRight, Code, Palette, Sparkles, Zap, Trophy, Users, GitBranch, Star } from "lucide-react";
+import { ArrowRight, Code, Palette, Sparkles, Zap, Trophy, Users, GitBranch } from "lucide-react";
 import Link from "next/link";
 import { useState } from 'react';
 import { useSession } from "next-auth/react";
@@ -103,56 +103,6 @@ export default function Home() {
             <p className="text-xl text-[#8b949e] max-w-2xl mx-auto">
               A month-long open source contribution program to showcase your skills and join our development team
             </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-            <div className="p-6 rounded-lg border border-[#30363d] bg-[#161b22] hover:border-[#238636] transition-all duration-300 group">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-lg bg-[#238636]/10 group-hover:scale-110 transition-transform duration-300">
-                  <GitBranch className="w-6 h-6 text-[#238636]" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-white mb-1">20+</div>
-                  <div className="text-sm text-[#8b949e]">Projects</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 rounded-lg border border-[#30363d] bg-[#161b22] hover:border-[#238636] transition-all duration-300 group">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-lg bg-[#238636]/10 group-hover:scale-110 transition-transform duration-300">
-                  <Users className="w-6 h-6 text-[#238636]" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-white mb-1">30</div>
-                  <div className="text-sm text-[#8b949e]">Days Challenge</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 rounded-lg border border-[#30363d] bg-[#161b22] hover:border-[#238636] transition-all duration-300 group">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-lg bg-[#238636]/10 group-hover:scale-110 transition-transform duration-300">
-                  <Trophy className="w-6 h-6 text-[#238636]" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-white mb-1">10</div>
-                  <div className="text-sm text-[#8b949e]">Team Positions</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 rounded-lg border border-[#30363d] bg-[#161b22] hover:border-[#238636] transition-all duration-300 group">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-lg bg-[#238636]/10 group-hover:scale-110 transition-transform duration-300">
-                  <Star className="w-6 h-6 text-[#238636]" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-white mb-1">100+</div>
-                  <div className="text-sm text-[#8b949e]">Contributors</div>
-                </div>
-              </div>
-            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
