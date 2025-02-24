@@ -31,16 +31,20 @@ export default function Home() {
           <div className="flex flex-wrap justify-center gap-4 mt-8">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#161b22] border border-[#30363d]">
               <GitBranch className="w-4 h-4 text-[#238636]" />
-              <span className="text-[#8b949e]">30 Days Challenge</span>
+              <span className="text-[#8b949e]">7 Days Challenge</span>
             </div>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#161b22] border border-[#30363d]">
               <Users className="w-4 h-4 text-[#238636]" />
-              <span className="text-[#8b949e]">10 Team Positions</span>
+              <span className="text-[#8b949e]">20 Team Positions</span>
             </div>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#161b22] border border-[#30363d]">
+
+            
+            {/* <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#161b22] border border-[#30363d]">
               <Trophy className="w-4 h-4 text-[#238636]" />
               <span className="text-[#8b949e]">Direct Team Entry</span>
-            </div>
+            </div> */}
+
+
           </div>
           
           {/* New: How to Apply Section */}
