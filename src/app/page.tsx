@@ -81,7 +81,7 @@ export default function Home() {
           />
           
           <CategoryCard
-            title="Creative Lead"
+            title="Creative Lead + Developer"
             description="Lead our creative initiatives and shape our brand identity"
             icon={<Palette className="w-6 h-6 text-[#F778BA]" />}
             points={[
