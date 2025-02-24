@@ -28,11 +28,27 @@ declare module "next-auth" {
   }
 }
 
+// First, add a type for the user data
+type UserData = {
+  login: string;
+  stats: {
+    totalPRs: number;
+    mergedPRs: number;
+  };
+};
+
 export default function SkillFest() {
   const { data: session } = useSession();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(false);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [topUsers, setTopUsers] = useState<Array<{
+    login: string;
+    stats: {
+      totalPRs: number;
+      mergedPRs: number;
+    };
+  }>>([]);
 
   useEffect(() => {
     if (session?.accessToken) {
@@ -46,6 +62,31 @@ export default function SkillFest() {
       return () => clearInterval(refreshInterval);
     }
   }, [session]);
+
+  useEffect(() => {
+    const fetchTopUsers = async () => {
+      try {
+        const response = await fetch('/api/logged-in-users');
+        if (!response.ok) throw new Error('Failed to fetch users');
+        
+        const users = await response.json() as UserData[];
+        
+        // Use the UserData type for sorting
+        const sortedUsers = users.sort((a: UserData, b: UserData) => {
+          if (b.stats.mergedPRs !== a.stats.mergedPRs) {
+            return b.stats.mergedPRs - a.stats.mergedPRs;
+          }
+          return b.stats.totalPRs - a.stats.totalPRs;
+        });
+
+        setTopUsers(sortedUsers.slice(0, 3));
+      } catch (error) {
+        console.error('Error fetching top users:', error);
+      }
+    };
+
+    fetchTopUsers();
+  }, []);
 
   const fetchIssues = async (token: string) => {
     setLoading(true);
@@ -191,14 +232,16 @@ export default function SkillFest() {
             <div className="text-center">
               <div className="text-[#8b949e] mb-4">2nd Place</div>
               <Image
-                src="https://github.com/mrgear111.png"
-                alt="mrgear111"
+                src={`https://github.com/${topUsers[1]?.login || 'ghost'}.png`}
+                alt={topUsers[1]?.login || 'Coming Soon'}
                 width={96}
                 height={96}
                 className="rounded-full border-4 border-[#238636] mb-4"
               />
-              <div className="text-white text-xl mb-2">mrgear111</div>
-              <div className="text-[#238636]">2/3 PRs</div>
+              <div className="text-white text-xl mb-2">{topUsers[1]?.login || 'Coming Soon'}</div>
+              <div className="text-[#238636]">
+                {topUsers[1] ? `${topUsers[1].stats.mergedPRs}/${topUsers[1].stats.totalPRs} PRs` : '0 PRs'}
+              </div>
             </div>
 
             {/* 1st Place */}
@@ -206,28 +249,32 @@ export default function SkillFest() {
               <Trophy className="w-8 h-8 text-[#238636] mx-auto mb-2" />
               <div className="text-[#238636] mb-4">1st Place</div>
               <Image
-                src="https://github.com/craftywebbz.png"
-                alt="craftywebbz"
+                src={`https://github.com/${topUsers[0]?.login || 'ghost'}.png`}
+                alt={topUsers[0]?.login || 'Coming Soon'}
                 width={120}
                 height={120}
                 className="rounded-full border-4 border-[#238636] mb-4"
               />
-              <div className="text-white text-xl mb-2">craftywebbz</div>
-              <div className="text-[#238636]">2/5 PRs</div>
+              <div className="text-white text-xl mb-2">{topUsers[0]?.login || 'Coming Soon'}</div>
+              <div className="text-[#238636]">
+                {topUsers[0] ? `${topUsers[0].stats.mergedPRs}/${topUsers[0].stats.totalPRs} PRs` : '0 PRs'}
+              </div>
             </div>
 
             {/* 3rd Place */}
             <div className="text-center">
               <div className="text-[#8b949e] mb-4">3rd Place</div>
               <Image
-                src="https://github.com/ghost.png"
-                alt="Coming Soon"
+                src={`https://github.com/${topUsers[2]?.login || 'ghost'}.png`}
+                alt={topUsers[2]?.login || 'Coming Soon'}
                 width={96}
                 height={96}
-                className="rounded-full border-4 border-[#30363d] mb-4"
+                className={`rounded-full border-4 ${topUsers[2] ? 'border-[#238636]' : 'border-[#30363d]'} mb-4`}
               />
-              <div className="text-white text-xl mb-2">Coming Soon</div>
-              <div className="text-[#8b949e]">0 PRs</div>
+              <div className="text-white text-xl mb-2">{topUsers[2]?.login || 'Coming Soon'}</div>
+              <div className={topUsers[2] ? 'text-[#238636]' : 'text-[#8b949e]'}>
+                {topUsers[2] ? `${topUsers[2].stats.mergedPRs}/${topUsers[2].stats.totalPRs} PRs` : '0 PRs'}
+              </div>
             </div>
           </div>
 
