@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from "react";
-import { ArrowLeft, Shield, Lock, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Shield, Lock, Eye, EyeOff, GitPullRequest, GitMerge, ExternalLink, X } from "lucide-react";
 import Link from "next/link";
 import { getActiveUsers } from "@/lib/firebase";
 import Image from "next/image";
@@ -22,6 +22,22 @@ type AdminUser = {
   };
 };
 
+type PullRequest = {
+  id: number;
+  title: string;
+  url: string;
+  state: string;
+  created_at: string;
+  merged_at?: string;
+  isOrg: boolean;
+};
+
+type UserDetail = {
+  login: string;
+  avatar_url: string;
+  pullRequests: PullRequest[];
+};
+
 export default function AdminPortal() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -29,6 +45,11 @@ export default function AdminPortal() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [userDetail, setUserDetail] = useState<UserDetail | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [prFilter, setPrFilter] = useState<'all' | 'merged' | 'open'>('all');
+  const [orgFilter, setOrgFilter] = useState<'all' | 'org' | 'personal'>('all');
 
   // The admin password - in a real app, this would be stored securely
   const ADMIN_PASSWORD = "skillfest2025";
@@ -73,43 +94,71 @@ export default function AdminPortal() {
     }
   };
 
+  const selectUser = async (login: string) => {
+    setSelectedUser(login);
+    setLoadingDetail(true);
+    setUserDetail(null);
+    
+    try {
+      console.log(`Fetching details for user: ${login}`);
+      
+      // Use a more robust fetch with error handling
+      const response = await fetch(`/api/admin/user-details?username=${login}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        },
+      });
+      
+      console.log(`Response status: ${response.status}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Error response: ${errorText}`);
+        throw new Error(`Failed to fetch user details: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log(`Received user details:`, data);
+      
+      setUserDetail(data);
+    } catch (error) {
+      console.error('Error fetching user details:', error);
+      // Don't set userDetail to null here, so we can show the error state
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-[#0d1117] text-white p-8">
         <div className="max-w-md mx-auto bg-[#161b22] border border-[#30363d] rounded-xl p-8">
           <div className="text-center mb-8">
             <Shield className="w-16 h-16 text-[#F778BA] mx-auto mb-4" />
-            <h1 className="text-2xl font-bold mb-4">Admin Access</h1>
-            <p className="text-[#8b949e] mb-6">
-              Enter the admin password to access the dashboard.
-            </p>
+            <h1 className="text-2xl font-bold mb-2">Admin Access</h1>
+            <p className="text-[#8b949e]">Enter the admin password to access the dashboard.</p>
           </div>
-          
-          <div className="bg-[#0d1117] border border-[#30363d] rounded-lg p-6 mb-6">
-            <h2 className="text-lg font-medium mb-4 flex items-center gap-2">
-              <Lock className="w-5 h-5 text-[#F778BA]" />
-              Admin Login
-            </h2>
-            
-            {error && (
-              <div className="bg-[#f85149]/10 border border-[#f85149]/30 text-[#f85149] p-3 rounded-lg mb-4 text-sm">
-                {error}
-              </div>
-            )}
-            
-            <div className="mb-4">
-              <label htmlFor="password" className="block text-sm text-[#8b949e] mb-2">
-                Password
+
+          <div className="space-y-6">
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-[#8b949e] mb-2">
+                <Lock className="w-4 h-4" />
+                Admin Login
               </label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
-                  id="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                  className="w-full bg-[#0d1117] border border-[#30363d] focus:border-[#58a6ff] text-white p-2 rounded-lg focus:outline-none"
                   placeholder="Enter admin password"
+                  className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[#F778BA] focus:border-transparent"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleLogin();
+                    }
+                  }}
                 />
                 <button
                   type="button"
@@ -120,32 +169,35 @@ export default function AdminPortal() {
                 </button>
               </div>
             </div>
-            
+
+            {error && (
+              <div className="text-[#f85149] text-sm bg-[#f85149]/10 border border-[#f85149]/20 rounded-lg p-3">
+                {error}
+              </div>
+            )}
+
             <button
               onClick={handleLogin}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-[#238636] hover:bg-[#2ea043] text-white py-3 px-4 rounded-lg transition-colors"
+              className="w-full bg-[#238636] hover:bg-[#2ea043] text-white py-2 rounded-lg transition-colors duration-300 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
-                  <span>Logging in...</span>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Logging in...
                 </>
               ) : (
                 <>
-                  <Shield className="w-5 h-5" />
-                  <span>Login as Admin</span>
+                  Login as Admin
                 </>
               )}
             </button>
-          </div>
-          
-          <div className="text-center">
-            <Link 
-              href="/"
-              className="inline-flex items-center gap-2 px-4 py-2 text-[#8b949e] hover:text-white transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
+
+            <Link href="/" className="block text-center text-[#8b949e] hover:text-white text-sm">
+              <ArrowLeft className="inline-block w-4 h-4 mr-1" />
               Return to Home
             </Link>
           </div>
@@ -154,110 +206,315 @@ export default function AdminPortal() {
     );
   }
 
-  // Admin dashboard view
   return (
-    <div className="min-h-screen bg-[#0d1117] text-white p-8">
+    <div className="min-h-screen bg-[#0d1117] text-white p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Link href="/" className="text-[#8b949e] hover:text-white transition-colors">
+        <div className="flex justify-between items-center mb-8">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="text-[#8b949e] hover:text-white">
               <ArrowLeft className="w-5 h-5" />
             </Link>
-            <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
+            <h1 className="text-2xl font-bold">Admin Dashboard</h1>
           </div>
-          <div className="bg-[#238636] text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
-            <Shield className="w-4 h-4" />
+          <div className="bg-[#238636] text-white px-3 py-1 rounded-full text-sm font-medium">
             Admin Access
           </div>
         </div>
 
-        <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-6 mb-8">
-          <h2 className="text-xl font-bold mb-4">User Statistics</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-[#0d1117] p-4 rounded-lg">
-              <div className="text-[#8b949e] text-sm mb-1">Total Users</div>
-              <div className="text-2xl font-bold text-white">{users.length}</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-6">
+            <div className="text-[#8b949e] text-sm mb-2">Total Users</div>
+            <div className="text-3xl font-bold">
+              {users.length}
             </div>
-            <div className="bg-[#0d1117] p-4 rounded-lg">
-              <div className="text-[#8b949e] text-sm mb-1">Total PRs</div>
-              <div className="text-2xl font-bold text-white">
-                {users.reduce((sum, user) => sum + user.stats.totalPRs, 0)}
-              </div>
+          </div>
+          <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-6">
+            <div className="text-[#8b949e] text-sm mb-2">Total PRs</div>
+            <div className="text-3xl font-bold">
+              {users.reduce((sum, user) => sum + user.stats.totalPRs, 0)}
             </div>
-            <div className="bg-[#0d1117] p-4 rounded-lg">
-              <div className="text-[#8b949e] text-sm mb-1">Merged PRs</div>
-              <div className="text-2xl font-bold text-white">
-                {users.reduce((sum, user) => sum + user.stats.mergedPRs, 0)}
-              </div>
+          </div>
+          <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-6">
+            <div className="text-[#8b949e] text-sm mb-2">Merged PRs</div>
+            <div className="text-3xl font-bold">
+              {users.reduce((sum, user) => sum + user.stats.mergedPRs, 0)}
             </div>
-            <div className="bg-[#0d1117] p-4 rounded-lg">
-              <div className="text-[#8b949e] text-sm mb-1">Total Contributions</div>
-              <div className="text-2xl font-bold text-white">
-                {users.reduce((sum, user) => sum + user.stats.contributions, 0)}
-              </div>
+          </div>
+          <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-6">
+            <div className="text-[#8b949e] text-sm mb-2">Total Contributions</div>
+            <div className="text-3xl font-bold">
+              {users.reduce((sum, user) => sum + user.stats.contributions, 0)}
             </div>
           </div>
         </div>
 
-        <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-6">
-          <h2 className="text-xl font-bold mb-4">User List</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-[#30363d]">
-                  <th className="text-left py-3 px-4 text-[#8b949e]">User</th>
-                  <th className="text-left py-3 px-4 text-[#8b949e]">Level</th>
-                  <th className="text-left py-3 px-4 text-[#8b949e]">Points</th>
-                  <th className="text-left py-3 px-4 text-[#8b949e]">PRs</th>
-                  <th className="text-left py-3 px-4 text-[#8b949e]">Merged PRs</th>
-                  <th className="text-left py-3 px-4 text-[#8b949e]">Org PRs</th>
-                  <th className="text-left py-3 px-4 text-[#8b949e]">Last Active</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.sort((a, b) => b.stats.points - a.stats.points).map((user) => (
-                  <tr key={user.login} className="border-b border-[#30363d] hover:bg-[#30363d]/30">
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-1">
+            <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-6">
+              <h2 className="text-xl font-bold mb-4">User List</h2>
+              <div className="overflow-y-auto max-h-[600px]">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-[#30363d]">
+                      <th className="text-left py-3 px-4 text-[#8b949e]">User</th>
+                      <th className="text-left py-3 px-4 text-[#8b949e]">Level</th>
+                      <th className="text-left py-3 px-4 text-[#8b949e]">Points</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.sort((a, b) => b.stats.points - a.stats.points).map((user) => (
+                      <tr 
+                        key={user.login} 
+                        className={`border-b border-[#30363d] hover:bg-[#30363d]/30 cursor-pointer ${selectedUser === user.login ? 'bg-[#30363d]/50' : ''}`}
+                        onClick={() => selectUser(user.login)}
+                      >
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-3">
+                            <Image 
+                              src={user.avatar_url} 
+                              alt={user.login}
+                              width={32}
+                              height={32}
+                              className="rounded-full"
+                            />
+                            <span className="text-white">
+                              {user.login}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            user.stats.level === 'Expert' ? 'bg-[#8957e5]/20 text-[#8957e5]' :
+                            user.stats.level === 'Advanced' ? 'bg-[#f778ba]/20 text-[#f778ba]' :
+                            user.stats.level === 'Intermediate' ? 'bg-[#3fb950]/20 text-[#3fb950]' :
+                            user.stats.level === 'Beginner' ? 'bg-[#58a6ff]/20 text-[#58a6ff]' :
+                            'bg-[#8b949e]/20 text-[#8b949e]'
+                          }`}>
+                            {user.stats.level}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 font-medium text-[#238636]">{user.stats.points}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          
+          <div className="lg:col-span-2">
+            <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-6 h-full">
+              {selectedUser ? (
+                loadingDetail ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#F778BA]"></div>
+                  </div>
+                ) : userDetail ? (
+                  <div>
+                    <div className="flex justify-between items-center mb-6">
+                      <div className="flex items-center gap-4">
                         <Image 
-                          src={user.avatar_url} 
-                          alt={user.login}
-                          width={32}
-                          height={32}
+                          src={userDetail.avatar_url} 
+                          alt={userDetail.login}
+                          width={48}
+                          height={48}
                           className="rounded-full"
                         />
-                        <a 
-                          href={`https://github.com/${user.login}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-white hover:text-[#58a6ff] transition-colors"
-                        >
-                          {user.login}
-                        </a>
+                        <div>
+                          <h2 className="text-xl font-bold">{userDetail.login}</h2>
+                          <a 
+                            href={`https://github.com/${userDetail.login}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#58a6ff] text-sm flex items-center gap-1 hover:underline"
+                          >
+                            View GitHub Profile
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
                       </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        user.stats.level === 'Expert' ? 'bg-[#8957e5]/20 text-[#8957e5]' :
-                        user.stats.level === 'Advanced' ? 'bg-[#f778ba]/20 text-[#f778ba]' :
-                        user.stats.level === 'Intermediate' ? 'bg-[#3fb950]/20 text-[#3fb950]' :
-                        user.stats.level === 'Beginner' ? 'bg-[#58a6ff]/20 text-[#58a6ff]' :
-                        'bg-[#8b949e]/20 text-[#8b949e]'
-                      }`}>
-                        {user.stats.level}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 font-medium text-[#238636]">{user.stats.points}</td>
-                    <td className="py-3 px-4">{user.stats.totalPRs}</td>
-                    <td className="py-3 px-4">{user.stats.mergedPRs}</td>
-                    <td className="py-3 px-4">{user.stats.orgPRs} / {user.stats.orgMergedPRs}</td>
-                    <td className="py-3 px-4 text-[#8b949e]">
-                      {user.lastActive.toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      <button 
+                        onClick={() => {
+                          setSelectedUser(null);
+                          setUserDetail(null);
+                        }}
+                        className="text-[#8b949e] hover:text-white"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                    
+                    <div className="mb-6">
+                      <h3 className="text-lg font-medium mb-3">User Stats</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {users.find(u => u.login === selectedUser)?.stats && (
+                          <>
+                            <div className="bg-[#0d1117] rounded-lg p-4">
+                              <div className="text-[#8b949e] text-xs mb-1">Total PRs</div>
+                              <div className="text-xl font-bold">{users.find(u => u.login === selectedUser)?.stats.totalPRs}</div>
+                            </div>
+                            <div className="bg-[#0d1117] rounded-lg p-4">
+                              <div className="text-[#8b949e] text-xs mb-1">Merged PRs</div>
+                              <div className="text-xl font-bold">{users.find(u => u.login === selectedUser)?.stats.mergedPRs}</div>
+                            </div>
+                            <div className="bg-[#0d1117] rounded-lg p-4">
+                              <div className="text-[#8b949e] text-xs mb-1">Org PRs</div>
+                              <div className="text-xl font-bold">{users.find(u => u.login === selectedUser)?.stats.orgPRs} / {users.find(u => u.login === selectedUser)?.stats.orgMergedPRs}</div>
+                            </div>
+                            <div className="bg-[#0d1117] rounded-lg p-4">
+                              <div className="text-[#8b949e] text-xs mb-1">Points</div>
+                              <div className="text-xl font-bold text-[#238636]">{users.find(u => u.login === selectedUser)?.stats.points}</div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setPrFilter('all')}
+                          className={`px-3 py-1 rounded-md text-sm ${
+                            prFilter === 'all' 
+                              ? 'bg-[#30363d] text-white' 
+                              : 'bg-transparent text-[#8b949e] hover:text-white'
+                          }`}
+                        >
+                          All
+                        </button>
+                        <button
+                          onClick={() => setPrFilter('open')}
+                          className={`px-3 py-1 rounded-md text-sm ${
+                            prFilter === 'open' 
+                              ? 'bg-[#238636] text-white' 
+                              : 'bg-transparent text-[#8b949e] hover:text-white'
+                          }`}
+                        >
+                          Open
+                        </button>
+                        <button
+                          onClick={() => setPrFilter('merged')}
+                          className={`px-3 py-1 rounded-md text-sm ${
+                            prFilter === 'merged' 
+                              ? 'bg-[#8957e5] text-white' 
+                              : 'bg-transparent text-[#8b949e] hover:text-white'
+                          }`}
+                        >
+                          Merged
+                        </button>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setOrgFilter('all')}
+                          className={`px-3 py-1 rounded-md text-sm ${
+                            orgFilter === 'all' 
+                              ? 'bg-[#30363d] text-white' 
+                              : 'bg-transparent text-[#8b949e] hover:text-white'
+                          }`}
+                        >
+                          All
+                        </button>
+                        <button
+                          onClick={() => setOrgFilter('org')}
+                          className={`px-3 py-1 rounded-md text-sm ${
+                            orgFilter === 'org' 
+                              ? 'bg-[#238636] text-white' 
+                              : 'bg-transparent text-[#8b949e] hover:text-white'
+                          }`}
+                        >
+                          Organization
+                        </button>
+                        <button
+                          onClick={() => setOrgFilter('personal')}
+                          className={`px-3 py-1 rounded-md text-sm ${
+                            orgFilter === 'personal' 
+                              ? 'bg-[#8957e5] text-white' 
+                              : 'bg-transparent text-[#8b949e] hover:text-white'
+                          }`}
+                        >
+                          Personal
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h3 className="text-lg font-medium mb-3">Pull Requests</h3>
+                      {userDetail.pullRequests && userDetail.pullRequests.length > 0 ? (
+                        <div className="space-y-3">
+                          {userDetail.pullRequests
+                            .filter(pr => {
+                              if (prFilter === 'all') return true;
+                              if (prFilter === 'open') return pr.state === 'open';
+                              if (prFilter === 'merged') return pr.state === 'merged';
+                              return true;
+                            })
+                            .filter(pr => {
+                              if (orgFilter === 'all') return true;
+                              if (orgFilter === 'org') return pr.isOrg;
+                              if (orgFilter === 'personal') return !pr.isOrg;
+                              return true;
+                            })
+                            .map(pr => (
+                              <a 
+                                key={pr.id}
+                                href={pr.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block bg-[#0d1117] border border-[#30363d] rounded-lg p-4 hover:border-[#58a6ff]/30 transition-colors"
+                              >
+                                <div className="flex justify-between items-start">
+                                  <div className="flex items-start gap-3">
+                                    {pr.state === 'merged' ? (
+                                      <GitMerge className="w-5 h-5 text-[#8957e5] mt-1" />
+                                    ) : pr.state === 'open' ? (
+                                      <GitPullRequest className="w-5 h-5 text-[#3fb950] mt-1" />
+                                    ) : (
+                                      <GitPullRequest className="w-5 h-5 text-[#8b949e] mt-1" />
+                                    )}
+                                    <div>
+                                      <div className="font-medium text-white">{pr.title}</div>
+                                      <div className="text-sm text-[#8b949e] mt-1">
+                                        Created: {new Date(pr.created_at).toLocaleDateString()}
+                                        {pr.merged_at && ` • Merged: ${new Date(pr.merged_at).toLocaleDateString()}`}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div>
+                                    {pr.isOrg && (
+                                      <span className="px-2 py-1 bg-[#238636]/10 text-[#238636] text-xs rounded-full">
+                                        Organization
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </a>
+                            ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 bg-[#0d1117] rounded-lg text-[#8b949e]">
+                          <GitPullRequest className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                          <p>No pull requests found</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-20 text-[#8b949e]">
+                    <GitPullRequest className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                    <p className="text-lg mb-2">Failed to load user details</p>
+                    <p className="text-sm">Please try selecting another user</p>
+                  </div>
+                )
+              ) : (
+                <div className="text-center py-20 text-[#8b949e]">
+                  <GitPullRequest className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                  <p className="text-lg mb-2">Select a user to view details</p>
+                  <p className="text-sm max-w-md mx-auto">
+                    View detailed GitHub activity, pull requests, and contribution statistics for each user.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

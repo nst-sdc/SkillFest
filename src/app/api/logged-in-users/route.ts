@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 import { authOptions } from "../auth/auth-options";
-import { addUserToDatabase, getActiveUsers } from "@/lib/firebase";
+import { addUserToDatabase, getActiveUsers, storePullRequests } from "@/lib/firebase";
 import { calculatePoints, getContributionLevel } from "@/lib/points-calculator";
 
 // Add types for GitHub API responses
@@ -242,6 +242,63 @@ export async function POST() {
       throw new Error("Failed to update Firebase database");
     }
     
+    // After you've fetched the PRs from GitHub API
+    // Store detailed PR information
+    const pullRequestDetails = [];
+
+    // For merged PRs
+    if (orgMergedPRsResponse.ok) {
+      const mergedPRsData = await orgMergedPRsResponse.json();
+      console.log(`Found ${mergedPRsData.items.length} merged PRs for ${githubUser.login}`);
+      
+      for (const item of mergedPRsData.items) {
+        const isOrg = item.repository_url.includes('nst-sdc');
+        pullRequestDetails.push({
+          id: item.id,
+          title: item.title,
+          url: item.html_url,
+          state: 'merged',
+          created_at: item.created_at,
+          merged_at: item.closed_at, // GitHub search API doesn't provide merged_at directly
+          isOrg
+        });
+      }
+    }
+
+    // For open PRs - make sure we're fetching all PRs, not just org PRs
+    const openPRsResponse = await fetch(
+      `https://api.github.com/search/issues?q=type:pr+author:${githubUser.login}+is:open`,
+      {
+        headers: {
+          'Authorization': `Bearer ${session.accessToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Cache-Control': 'no-cache',
+        },
+      }
+    );
+
+    if (openPRsResponse.ok) {
+      const openPRsData = await openPRsResponse.json();
+      console.log(`Found ${openPRsData.items.length} open PRs for ${githubUser.login}`);
+      
+      for (const item of openPRsData.items) {
+        const isOrg = item.repository_url.includes('nst-sdc');
+        pullRequestDetails.push({
+          id: item.id,
+          title: item.title,
+          url: item.html_url,
+          state: 'open',
+          created_at: item.created_at,
+          isOrg
+        });
+      }
+    }
+
+    // Store PR details in Firebase
+    console.log(`Storing ${pullRequestDetails.length} PRs for user ${githubUser.login}`);
+    const prStoreResult = await storePullRequests(githubUser.login, pullRequestDetails);
+    console.log(`PR storage result: ${prStoreResult ? 'success' : 'failed'}`);
+
     return NextResponse.json({ 
       success: true,
       stats: {

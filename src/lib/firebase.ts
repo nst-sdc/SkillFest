@@ -83,6 +83,18 @@ if (typeof window !== 'undefined') {
   }
 }
 
+// Add this new type for pull requests
+type PullRequestData = {
+  id: number;
+  title: string;
+  url: string;
+  state: string;
+  created_at: string;
+  merged_at?: string;
+  isOrg: boolean;
+};
+
+// Add this to your existing types
 type UserStats = {
   login: string;
   lastActive: Date;
@@ -95,6 +107,78 @@ type UserStats = {
     points?: number;
     level?: string;
   };
+  pullRequests?: PullRequestData[];
+};
+
+// Enhance the storePullRequests function
+export const storePullRequests = async (userId: string, pullRequests: PullRequestData[]) => {
+  if (!database) {
+    console.error("Firebase database not initialized");
+    return false;
+  }
+
+  try {
+    // Filter out any invalid PRs
+    const validPRs = pullRequests.filter(pr => pr && pr.id && pr.title);
+    console.log(`Storing ${validPRs.length} valid PRs for user ${userId}`);
+    
+    if (validPRs.length === 0) {
+      console.log("No valid PRs to store");
+      return true; // Not an error, just no PRs
+    }
+    
+    const prRef = ref(database, `users/${userId}/pullRequests`);
+    await set(prRef, validPRs);
+    console.log("Successfully stored PR data");
+    return true;
+  } catch (error) {
+    console.error('Error storing pull requests:', error);
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        code: (error as {code?: string}).code,
+        message: error.message,
+        stack: error.stack
+      });
+    }
+    return false;
+  }
+};
+
+// Enhance the getUserPullRequests function with better error handling and debugging
+export const getUserPullRequests = async (userId: string): Promise<PullRequestData[]> => {
+  if (!database) {
+    console.error("Firebase database not initialized");
+    return [];
+  }
+
+  try {
+    console.log(`Attempting to fetch PRs for user ${userId}`);
+    const prRef = ref(database, `users/${userId}/pullRequests`);
+    const snapshot = await get(prRef);
+    
+    if (snapshot.exists()) {
+      // Firebase might store this as an object with numeric keys instead of an array
+      const data = snapshot.val();
+      console.log(`Raw PR data for ${userId}:`, data);
+      
+      // Handle both array and object formats
+      let prs: PullRequestData[] = [];
+      if (Array.isArray(data)) {
+        prs = data;
+      } else if (typeof data === 'object') {
+        prs = Object.values(data);
+      }
+      
+      console.log(`Found ${prs.length} PRs for user ${userId}`);
+      return prs.filter(pr => pr && pr.id); // Filter out any null/undefined entries
+    }
+    
+    console.log(`No PRs found for user ${userId}`);
+    return [];
+  } catch (error) {
+    console.error(`Error fetching pull requests for ${userId}:`, error);
+    return [];
+  }
 };
 
 // Add type for database user
