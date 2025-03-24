@@ -6,6 +6,19 @@ import { useEffect, useState, useCallback } from "react";
 import Image from 'next/image';
 import { subscribeToUsers } from '@/lib/firebase';
 
+type UserStats = {
+  login: string;
+  stats?: {
+    totalPRs: number;
+    mergedPRs: number;
+    contributions: number;
+    orgPRs?: number;
+    orgMergedPRs?: number;
+    points?: number;
+    level?: string;
+  };
+};
+
 type Contributor = {
   login: string;
   avatar_url: string;
@@ -23,42 +36,30 @@ type Contributor = {
   };
 };
 
-// Add types for the API response
-type UserResponse = {
-  login: string;
-  stats: {
-    totalPRs: number;
-    mergedPRs: number;
-    contributions: number;
-    orgPRs?: number;
-    orgMergedPRs?: number;
-    points?: number;
-    level?: string;
-  };
-};
-
 export default function Leaderboard() {
   const [contributors, setContributors] = useState<Contributor[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const processUsers = useCallback((users: UserResponse[]) => {
-    const sortedUsers = users.sort((a, b) => {
-      const pointsA = a.stats.points || 0;
-      const pointsB = b.stats.points || 0;
-      const mergedPRsA = a.stats.mergedPRs || 0;
-      const mergedPRsB = b.stats.mergedPRs || 0;
-      const totalPRsA = a.stats.totalPRs || 0;
-      const totalPRsB = b.stats.totalPRs || 0;
+  const processUsers = useCallback((users: UserStats[]) => {
+    const sortedUsers = users
+      .filter(user => user.stats) // Filter out users without stats
+      .sort((a, b) => {
+        const pointsA = a.stats?.points || 0;
+        const pointsB = b.stats?.points || 0;
+        const mergedPRsA = a.stats?.mergedPRs || 0;
+        const mergedPRsB = b.stats?.mergedPRs || 0;
+        const totalPRsA = a.stats?.totalPRs || 0;
+        const totalPRsB = b.stats?.totalPRs || 0;
 
-      if (pointsB !== pointsA) {
-        return pointsB - pointsA;
-      }
-      if (mergedPRsB !== mergedPRsA) {
-        return mergedPRsB - mergedPRsA;
-      }
-      return totalPRsB - totalPRsA;
-    });
+        if (pointsB !== pointsA) {
+          return pointsB - pointsA;
+        }
+        if (mergedPRsB !== mergedPRsA) {
+          return mergedPRsB - mergedPRsA;
+        }
+        return totalPRsB - totalPRsA;
+      });
 
     return sortedUsers.map((user, index) => ({
       login: user.login,
@@ -66,14 +67,14 @@ export default function Leaderboard() {
       html_url: `https://github.com/${user.login}`,
       rank: index + 1,
       hasLoggedIn: true,
-      contributions: user.stats.contributions,
-      points: user.stats.points || 0,
-      level: user.stats.level || 'Newcomer',
+      contributions: user.stats?.contributions || 0,
+      points: user.stats?.points || 0,
+      level: user.stats?.level || 'Newcomer',
       pullRequests: {
-        total: user.stats.totalPRs,
-        merged: user.stats.mergedPRs,
-        orgTotal: user.stats.orgPRs,
-        orgMerged: user.stats.orgMergedPRs
+        total: user.stats?.totalPRs || 0,
+        merged: user.stats?.mergedPRs || 0,
+        orgTotal: user.stats?.orgPRs,
+        orgMerged: user.stats?.orgMergedPRs
       }
     }));
   }, []);
