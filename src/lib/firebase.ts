@@ -4,7 +4,7 @@ import { getDatabase, ref, set, get, child, update, Database } from "firebase/da
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || "https://skillfest-6999c-default-rtdb.firebaseio.com",
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
@@ -12,32 +12,75 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
-// Initialize Firebase
+// Add this at the top of your file
+const logFirebaseConfig = () => {
+  // Log a sanitized version of the config (without actual keys)
+  console.log("Firebase config check:", {
+    apiKeyExists: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+    authDomainExists: !!process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    databaseURLExists: !!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+    projectIdExists: !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucketExists: !!process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderIdExists: !!process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appIdExists: !!process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+    measurementIdExists: !!process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+  });
+};
+
+// Call this before initializing Firebase
+logFirebaseConfig();
+
+// Replace your current initialization code with this
 let app;
 let database: Database | undefined;
 
 // Only initialize if no apps exist yet
-if (typeof window !== 'undefined' && getApps().length === 0) {
+if (typeof window !== 'undefined') {
   try {
-    app = initializeApp(firebaseConfig);
+    console.log("Attempting to initialize Firebase (client-side)");
+    
+    // Check if we already have initialized apps
+    if (getApps().length === 0) {
+      app = initializeApp(firebaseConfig);
+    } else {
+      app = getApps()[0];
+    }
+    
     database = getDatabase(app);
     console.log("Firebase initialized successfully (client-side)");
+    console.log("Database URL:", database.app.options.databaseURL);
   } catch (error) {
-    console.error("Error initializing Firebase:", error);
+    console.error("Error initializing Firebase (client-side):", error);
+    if (error instanceof Error) {
+      console.error("Error details:", {
+        message: error.message,
+        stack: error.stack
+      });
+    }
   }
-} else if (getApps().length === 0) {
+} else {
   // Server-side initialization
   try {
-    app = initializeApp(firebaseConfig);
+    console.log("Attempting to initialize Firebase (server-side)");
+    
+    // Check if we already have initialized apps
+    if (getApps().length === 0) {
+      app = initializeApp(firebaseConfig);
+    } else {
+      app = getApps()[0];
+    }
+    
     database = getDatabase(app);
     console.log("Firebase initialized successfully (server-side)");
   } catch (error) {
-    console.error("Error initializing Firebase:", error);
+    console.error("Error initializing Firebase (server-side):", error);
+    if (error instanceof Error) {
+      console.error("Error details:", {
+        message: error.message,
+        stack: error.stack
+      });
+    }
   }
-} else {
-  // Use existing app
-  app = getApps()[0];
-  database = getDatabase(app);
 }
 
 type UserStats = {
@@ -166,10 +209,12 @@ export const testFirebaseConnection = async () => {
   }
 
   try {
+    console.log("Testing Firebase connection to:", database.app.options.databaseURL);
     const testRef = ref(database, 'users/test-connection');
     await set(testRef, {
       timestamp: new Date().toISOString(),
-      message: 'Test connection successful'
+      message: 'Test connection successful',
+      environment: process.env.NODE_ENV
     });
     console.log("Firebase test write successful");
     return true;
@@ -181,6 +226,11 @@ export const testFirebaseConnection = async () => {
         message: error.message,
         stack: error.stack
       });
+      
+      // Check for specific error types
+      if ((error as {code?: string}).code === 'PERMISSION_DENIED') {
+        console.error('This is a Firebase rules issue. Check your database rules.');
+      }
     }
     return false;
   }
