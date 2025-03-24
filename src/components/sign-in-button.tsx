@@ -55,10 +55,10 @@ export function SignInButton() {
 
   if (session) {
     return (
-      <div className="flex items-center gap-4">
-        <div className="text-right">
+      <div className="flex-col items-center gap-4">
+        <div className="text-center">
           <p className="text-sm font-medium text-white">{session.user?.name}</p>
-          <p className="text-xs text-[#8b949e]">{session.user?.email}</p>
+          <p className="text-xs text-[#8b949e] m-2">{session.user?.email}</p>
         </div>
         <button
           onClick={() => signOut()}
