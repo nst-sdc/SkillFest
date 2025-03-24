@@ -21,7 +21,7 @@ export default function Home() {
             </span>
           </div>
           <h1 className="text-5xl md:text-7xl font-bold mb-4 gradient-text">
-            Dev Club Recruitment
+            SkillFest 2025
           </h1>
           <p className="text-xl text-[#8b949e] max-w-2xl mx-auto">
             Join our elite team of developers, designers, and creators
@@ -105,7 +105,7 @@ export default function Home() {
               What is SkillFest?
             </h2>
             <p className="text-xl text-[#8b949e] max-w-2xl mx-auto">
-              A month-long open source contribution program to showcase your skills and join our development team
+              A week-long open source contribution program to showcase your open source skills and join our development team
             </p>
           </div>
 

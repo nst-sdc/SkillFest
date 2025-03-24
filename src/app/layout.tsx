@@ -9,7 +9,7 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Dev Club Recruitment",
+  title: "SkillFest 2025",
   description: "Join our community",
 };
 

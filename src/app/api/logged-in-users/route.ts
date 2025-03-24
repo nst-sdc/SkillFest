@@ -35,7 +35,7 @@ type WeeklyStats = {
 export async function GET() {
   try {
     const activeUsers = await getActiveUsers();
-    // Return all users without filtering
+    
     return NextResponse.json(activeUsers);
   } catch (error) {
     console.error('Error fetching users:', error);
