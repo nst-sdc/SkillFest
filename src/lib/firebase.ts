@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from "firebase/app";
-import { getDatabase, ref, set, get, child, update, Database, onValue } from "firebase/database";
+import { getDatabase, ref, set, get, child, update, Database } from "firebase/database";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -69,35 +69,37 @@ type DatabaseUser = {
   };
 };
 
-// Add a type for Firebase-like errors
-type FirebaseError = {
-  code?: string;
-  message?: string;
-  stack?: string;
-};
-
-export const addUserToDatabase = async (userId: string, userData: UserStats): Promise<boolean> => {
+export const addUserToDatabase = async (userId: string, userData: UserStats) => {
   if (!database) {
     console.error("Firebase database not initialized");
     return false;
   }
 
   try {
+    console.log(`Attempting to write to Firebase for user ${userId}:`, userData);
+    console.log('Database instance:', database);
+    console.log('Database URL:', database.app.options.databaseURL);
+    
     const userRef = ref(database, `users/${userId}`);
-    await set(userRef, userData);
+    console.log('User reference created:', userRef.key);
+    
+    const dataToWrite = {
+      ...userData,
+      lastActive: userData.lastActive.toISOString(),
+    };
+    console.log('Data to write:', dataToWrite);
+    
+    await set(userRef, dataToWrite);
+    console.log("Successfully wrote to Firebase");
     return true;
   } catch (error) {
     console.error('Error adding user to database:', error);
-    // Type guard for Firebase-like errors
-    if (error && typeof error === 'object') {
-      const firebaseError = error as FirebaseError;
+    if (error instanceof Error) {
       console.error('Error details:', {
-        code: firebaseError.code,
-        message: firebaseError.message,
-        stack: firebaseError.stack
+        code: (error as {code?: string}).code,
+        message: error.message,
+        stack: error.stack
       });
-    } else {
-      console.error('Unknown error type:', error);
     }
     return false;
   }
@@ -156,36 +158,30 @@ export const getActiveUsers = async () => {
   }
 };
 
-// Add a function to subscribe to real-time updates
-export const subscribeToUsers = (callback: (users: UserStats[]) => void) => {
+// Update the test function to use the users path
+export const testFirebaseConnection = async () => {
   if (!database) {
     console.error("Firebase database not initialized");
-    return () => {}; // Return empty cleanup function
+    return false;
   }
 
-  const usersRef = ref(database, 'users');
-  
-  // Set up real-time listener
-  const unsubscribe = onValue(usersRef, (snapshot) => {
-    if (snapshot.exists()) {
-      const users = snapshot.val() as Record<string, DatabaseUser>;
-      const usersList = Object.values(users).map((user) => ({
-        login: user.login,
-        lastActive: new Date(user.lastActive),
-        stats: {
-          totalPRs: user.stats?.totalPRs || 0,
-          mergedPRs: user.stats?.mergedPRs || 0,
-          contributions: user.stats?.contributions || 0,
-          orgPRs: user.stats?.orgPRs || 0,
-          orgMergedPRs: user.stats?.orgMergedPRs || 0,
-          points: user.stats?.points || 0,
-          level: user.stats?.level || 'Newcomer',
-        }
-      }));
-      callback(usersList);
+  try {
+    const testRef = ref(database, 'users/test-connection');
+    await set(testRef, {
+      timestamp: new Date().toISOString(),
+      message: 'Test connection successful'
+    });
+    console.log("Firebase test write successful");
+    return true;
+  } catch (error) {
+    console.error('Firebase test write failed:', error);
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        code: (error as {code?: string}).code,
+        message: error.message,
+        stack: error.stack
+      });
     }
-  });
-
-  // Return unsubscribe function for cleanup
-  return unsubscribe;
+    return false;
+  }
 }; 

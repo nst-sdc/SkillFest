@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useSession } from "next-auth/react";
 import { LoginPopup } from "@/components/login-popup";
 import { useRouter } from "next/navigation";
+import { testFirebaseConnection } from "@/lib/firebase";
 
 export default function Home() {
   return (
@@ -197,6 +198,16 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        <button
+          onClick={async () => {
+            const result = await testFirebaseConnection();
+            alert(result ? "Firebase connection successful!" : "Firebase connection failed!");
+          }}
+          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
+        >
+          Test Firebase Connection
+        </button>
       </main>
     </div>
   );

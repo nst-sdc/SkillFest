@@ -9,6 +9,12 @@ type GitHubRepo = {
   name: string;
 };
 
+// Remove this unused type or comment it out
+// type GitHubPR = {
+//   id: number;
+//   state: string;
+// };
+
 type GitHubStats = {
   author?: {
     login: string;

@@ -39,7 +39,7 @@ export function SignInButton() {
     if (status === 'authenticated') {
       updateStats();
     }
-  }, [session, status]); 
+  }, [session, status]);
 
   if (status === "loading") {
     return (
