@@ -3,12 +3,43 @@
 import { signOut, useSession } from "next-auth/react";
 import { Github, LogOut, Loader2 } from "lucide-react";
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LoginPopup } from "./login-popup";
 
 export function SignInButton() {
   const { data: session, status } = useSession();
   const [showLoginPopup, setShowLoginPopup] = useState(false);
+
+  useEffect(() => {
+    const updateStats = async () => {
+      if (session?.user) {
+        try {
+          console.log('Attempting to update stats for user:', session.user);
+          const response = await fetch('/api/logged-in-users', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Error response from API:', errorData);
+            return;
+          }
+          
+          const result = await response.json();
+          console.log('Successfully updated user stats:', result);
+        } catch (error) {
+          console.error('Error updating stats on login:', error);
+        }
+      }
+    };
+
+    if (status === 'authenticated') {
+      updateStats();
+    }
+  }, [session, status]);
 
   if (status === "loading") {
     return (

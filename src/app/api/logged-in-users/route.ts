@@ -2,15 +2,11 @@ import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 import { authOptions } from "../auth/auth-options";
 import { addUserToDatabase, getActiveUsers } from "@/lib/firebase";
+import { calculatePoints, getContributionLevel } from "@/lib/points-calculator";
 
 // Add types for GitHub API responses
 type GitHubRepo = {
   name: string;
-};
-
-type GitHubPR = {
-  id: number;
-  state: string;
 };
 
 type GitHubStats = {
@@ -67,6 +63,82 @@ export async function POST() {
     const githubUser = await githubResponse.json();
     console.log("GitHub user fetched:", githubUser.login);
 
+    // Get PRs from the organization
+    const orgPRsResponse = await fetch(
+      `https://api.github.com/search/issues?q=type:pr+author:${githubUser.login}+org:nst-sdc`,
+      {
+        headers: {
+          'Authorization': `Bearer ${session.accessToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Cache-Control': 'no-cache',
+        },
+      }
+    );
+
+    let orgPRs = 0;
+    if (orgPRsResponse.ok) {
+      const searchResult = await orgPRsResponse.json();
+      orgPRs = searchResult.total_count;
+      console.log(`Found ${orgPRs} PRs in the organization`);
+    }
+
+    // Get all PRs by the user (across GitHub)
+    const allPRsResponse = await fetch(
+      `https://api.github.com/search/issues?q=type:pr+author:${githubUser.login}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${session.accessToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Cache-Control': 'no-cache',
+        },
+      }
+    );
+
+    let totalPRs = 0;
+    if (allPRsResponse.ok) {
+      const searchResult = await allPRsResponse.json();
+      totalPRs = searchResult.total_count;
+      console.log(`Found ${totalPRs} total PRs across GitHub`);
+    }
+
+    // Get merged PRs in the organization
+    const orgMergedPRsResponse = await fetch(
+      `https://api.github.com/search/issues?q=type:pr+author:${githubUser.login}+org:nst-sdc+is:merged`,
+      {
+        headers: {
+          'Authorization': `Bearer ${session.accessToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Cache-Control': 'no-cache',
+        },
+      }
+    );
+
+    let orgMergedPRs = 0;
+    if (orgMergedPRsResponse.ok) {
+      const mergedResult = await orgMergedPRsResponse.json();
+      orgMergedPRs = mergedResult.total_count;
+      console.log(`Found ${orgMergedPRs} merged PRs in the organization`);
+    }
+
+    // Get all merged PRs by the user
+    const allMergedPRsResponse = await fetch(
+      `https://api.github.com/search/issues?q=type:pr+author:${githubUser.login}+is:merged`,
+      {
+        headers: {
+          'Authorization': `Bearer ${session.accessToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Cache-Control': 'no-cache',
+        },
+      }
+    );
+
+    let mergedPRs = 0;
+    if (allMergedPRsResponse.ok) {
+      const mergedResult = await allMergedPRsResponse.json();
+      mergedPRs = mergedResult.total_count;
+      console.log(`Found ${mergedPRs} total merged PRs across GitHub`);
+    }
+
     // Get all repositories in the organization
     const reposResponse = await fetch('https://api.github.com/orgs/nst-sdc/repos', {
       headers: {
@@ -80,50 +152,6 @@ export async function POST() {
     console.log("Found repositories:", repos.map(r => r.name));
 
     let totalContributions = 0;
-    let allPRs: GitHubPR[] = [];
-
-    // Get PRs using search API for more reliable results
-    const searchPRsResponse = await fetch(
-      `https://api.github.com/search/issues?q=type:pr+author:${githubUser.login}+org:nst-sdc`,
-      {
-        headers: {
-          'Authorization': `Bearer ${session.accessToken}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'Cache-Control': 'no-cache',
-        },
-      }
-    );
-
-    if (searchPRsResponse.ok) {
-      const searchResult = await searchPRsResponse.json();
-      allPRs = searchResult.items;
-      console.log(`Found ${allPRs.length} total PRs through search`);
-    }
-
-    // Count merged PRs separately to ensure accuracy
-    const mergedPRsResponse = await fetch(
-      `https://api.github.com/search/issues?q=type:pr+author:${githubUser.login}+org:nst-sdc+is:merged`,
-      {
-        headers: {
-          'Authorization': `Bearer ${session.accessToken}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'Cache-Control': 'no-cache',
-        },
-      }
-    );
-
-    let mergedPRsCount = 0;
-    if (mergedPRsResponse.ok) {
-      const mergedResult = await mergedPRsResponse.json();
-      mergedPRsCount = mergedResult.total_count;
-      console.log(`Found ${mergedPRsCount} merged PRs`);
-    }
-
-    const prStats = {
-      totalPRs: allPRs.length,
-      mergedPRs: mergedPRsCount,
-    };
-    console.log("Final PR Stats:", prStats);
 
     // Get contributions using the statistics API
     for (const repo of repos) {
@@ -173,24 +201,34 @@ export async function POST() {
       }
     }
 
+    // Calculate points
+    const contributionData = {
+      totalPRs,
+      mergedPRs,
+      contributions: totalContributions,
+      orgPRs,
+      orgMergedPRs
+    };
+    
+    const points = calculatePoints(contributionData);
+    const level = getContributionLevel(points);
+    
     const userStats = {
       login: githubUser.login,
       lastActive: new Date(),
       stats: {
-        totalPRs: prStats.totalPRs,
-        mergedPRs: prStats.mergedPRs,
+        totalPRs,
+        mergedPRs,
         contributions: totalContributions,
+        orgPRs,
+        orgMergedPRs,
+        points,
+        level
       }
     };
     
     console.log("Attempting to update Firebase with stats:", userStats);
     
-    // Add user to Firebase with stats
-
-
-
-    // const dbUpdateResult = await addUserToDatabase(githubUser.id.toString(), userStats);
-
     const dbUpdateResult = await addUserToDatabase(githubUser.login, userStats);
     console.log("Firebase update result:", dbUpdateResult);
     
@@ -201,8 +239,10 @@ export async function POST() {
     return NextResponse.json({ 
       success: true,
       stats: {
-        prs: prStats,
-        contributions: totalContributions
+        prs: { totalPRs, mergedPRs, orgPRs, orgMergedPRs },
+        contributions: totalContributions,
+        points,
+        level
       }
     });
   } catch (error) {

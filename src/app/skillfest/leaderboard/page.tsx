@@ -1,10 +1,10 @@
 'use client';
 
-import { useSession } from "next-auth/react";
-import { ArrowLeft, Trophy, GitPullRequest, Star } from "lucide-react";
+import { ArrowLeft, Trophy, GitPullRequest, Star, Award } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
 import Image from 'next/image';
+import { subscribeToUsers } from '@/lib/firebase';
 
 type Contributor = {
   login: string;
@@ -13,9 +13,13 @@ type Contributor = {
   rank?: number;
   hasLoggedIn?: boolean;
   contributions?: number;
+  points?: number;
+  level?: string;
   pullRequests: {
     total: number;
     merged: number;
+    orgTotal?: number;
+    orgMerged?: number;
   };
 };
 
@@ -26,14 +30,53 @@ type UserResponse = {
     totalPRs: number;
     mergedPRs: number;
     contributions: number;
+    orgPRs?: number;
+    orgMergedPRs?: number;
+    points?: number;
+    level?: string;
   };
 };
 
 export default function Leaderboard() {
-  const { data: session, status } = useSession();
   const [contributors, setContributors] = useState<Contributor[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  const processUsers = useCallback((users: UserResponse[]) => {
+    const sortedUsers = users.sort((a, b) => {
+      const pointsA = a.stats.points || 0;
+      const pointsB = b.stats.points || 0;
+      const mergedPRsA = a.stats.mergedPRs || 0;
+      const mergedPRsB = b.stats.mergedPRs || 0;
+      const totalPRsA = a.stats.totalPRs || 0;
+      const totalPRsB = b.stats.totalPRs || 0;
+
+      if (pointsB !== pointsA) {
+        return pointsB - pointsA;
+      }
+      if (mergedPRsB !== mergedPRsA) {
+        return mergedPRsB - mergedPRsA;
+      }
+      return totalPRsB - totalPRsA;
+    });
+
+    return sortedUsers.map((user, index) => ({
+      login: user.login,
+      avatar_url: `https://avatars.githubusercontent.com/${user.login}`,
+      html_url: `https://github.com/${user.login}`,
+      rank: index + 1,
+      hasLoggedIn: true,
+      contributions: user.stats.contributions,
+      points: user.stats.points || 0,
+      level: user.stats.level || 'Newcomer',
+      pullRequests: {
+        total: user.stats.totalPRs,
+        merged: user.stats.mergedPRs,
+        orgTotal: user.stats.orgPRs,
+        orgMerged: user.stats.orgMergedPRs
+      }
+    }));
+  }, []);
 
   const fetchAllLoggedInUsers = useCallback(async () => {
     setLoading(true);
@@ -41,79 +84,39 @@ export default function Leaderboard() {
       const response = await fetch('/api/logged-in-users');
       if (!response.ok) throw new Error('Failed to fetch users');
       
-      const users = (await response.json()) as UserResponse[];
-      
-      // Sort users by merged PRs first, then total PRs
-      const sortedUsers = users.sort((a, b) => {
-        if (b.stats.mergedPRs !== a.stats.mergedPRs) {
-          return b.stats.mergedPRs - a.stats.mergedPRs;
-        }
-        return b.stats.totalPRs - a.stats.totalPRs;
-      });
-
-      // Add ranks and use avatars.githubusercontent.com for images
-      const rankedUsers = sortedUsers.map((user, index: number) => ({
-        login: user.login,
-        avatar_url: `https://avatars.githubusercontent.com/${user.login}`,
-        html_url: `https://github.com/${user.login}`,
-        rank: index + 1,
-        hasLoggedIn: true,
-        contributions: user.stats.contributions,
-        pullRequests: {
-          total: user.stats.totalPRs,
-          merged: user.stats.mergedPRs,
-        }
-      }));
-
-      setContributors(rankedUsers);
+      const users = await response.json();
+      const processedUsers = processUsers(users);
+      setContributors(processedUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [processUsers]);
 
-  const refreshUserStats = useCallback(async () => {
-    if (!session?.accessToken) return;
-    
+  // Manual refresh handler
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    try {
-      // Force refresh stats from GitHub
-      const response = await fetch('/api/logged-in-users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to refresh stats');
-      }
-    
-      // Fetch updated data
-      await fetchAllLoggedInUsers();
-    } catch (error) {
-      console.error('Error refreshing stats:', error);
-    } finally {
-      setRefreshing(false);
-    }
-  }, [session?.accessToken, fetchAllLoggedInUsers]);
+    await fetchAllLoggedInUsers();
+    setRefreshing(false);
+  }, [fetchAllLoggedInUsers]);
 
+  // Single useEffect for setting up real-time updates
   useEffect(() => {
-    if (status === 'authenticated' && session?.accessToken) {
-      refreshUserStats();
-      fetchAllLoggedInUsers();
+    // Initial fetch
+    fetchAllLoggedInUsers();
 
-      const interval = setInterval(() => {
-        if (session?.accessToken) {
-          refreshUserStats();
-          fetchAllLoggedInUsers();
-        }
-      }, 30000);
+    // Set up real-time listener
+    const unsubscribe = subscribeToUsers((users) => {
+      const processedUsers = processUsers(users);
+      setContributors(processedUsers);
+    });
 
-      return () => clearInterval(interval);
-    }
-  }, [status, session, refreshUserStats, fetchAllLoggedInUsers]);
+    // Cleanup on unmount
+    return () => {
+      unsubscribe();
+    };
+  }, [fetchAllLoggedInUsers, processUsers]);
 
   const getPositionStyle = (rank: number) => {
     switch(rank) {
@@ -123,6 +126,17 @@ export default function Leaderboard() {
       default: return 'from-[#238636]/50 to-[#2ea043]/50';
     }
   };
+
+  // Add a helper function to get level color
+  function getLevelColor(level: string): string {
+    switch (level) {
+      case 'Expert': return 'text-purple-400';
+      case 'Advanced': return 'text-blue-400';
+      case 'Intermediate': return 'text-green-400';
+      case 'Beginner': return 'text-yellow-400';
+      default: return 'text-gray-400';
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#0d1117]">
@@ -139,23 +153,15 @@ export default function Leaderboard() {
           </Link>
           
           <button
-            onClick={refreshUserStats}
-            disabled={refreshing}
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#238636]/10 text-[#238636] hover:bg-[#238636]/20 transition-colors disabled:opacity-50"
+            onClick={handleRefresh}
+            disabled={refreshing || loading}
+            className={`px-4 py-2 rounded-lg text-sm ${
+              refreshing || loading
+                ? 'bg-[#30363d] text-[#8b949e]'
+                : 'bg-[#238636] text-white hover:bg-[#2ea043]'
+            } transition-colors duration-200`}
           >
-            {refreshing ? (
-              <>
-                <div className="w-4 h-4 border-2 border-[#238636] border-t-transparent rounded-full animate-spin" />
-                <span>Refreshing...</span>
-              </>
-            ) : (
-              <>
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-                <span>Refresh Stats</span>
-              </>
-            )}
+            {refreshing ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
 
@@ -214,7 +220,13 @@ export default function Leaderboard() {
                             </div>
                             <div className="flex items-center gap-1">
                               <Star className="w-4 h-4" />
-                              <span>{contributor.contributions} contributions</span>
+                              <span>{contributor.points} points</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Award className="w-4 h-4" />
+                              <span className={getLevelColor(contributor.level || 'Newcomer')}>
+                                {contributor.level}
+                              </span>
                             </div>
                           </div>
                         </div>
