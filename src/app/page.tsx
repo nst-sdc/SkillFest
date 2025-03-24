@@ -38,14 +38,10 @@ export default function Home() {
               <Users className="w-4 h-4 text-[#238636]" />
               <span className="text-[#8b949e]">20 Team Positions</span>
             </div>
-
-            
-            {/* <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#161b22] border border-[#30363d]">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#161b22] border border-[#30363d]">
               <Trophy className="w-4 h-4 text-[#238636]" />
-              <span className="text-[#8b949e]">Direct Team Entry</span>
-            </div> */}
-
-
+              <span className="text-[#8b949e]">Top Performers Rewarded</span>
+            </div>
           </div>
           
           {/* New: How to Apply Section */}
@@ -110,45 +106,13 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
-            <div className="p-6 rounded-lg border border-[#30363d] bg-[#161b22] hover:border-[#238636] transition-all duration-300 group">
-              <div className="p-3 rounded-lg bg-[#238636]/10 w-fit mb-4 group-hover:scale-110 transition-transform duration-300">
-                <Code className="w-6 h-6 text-[#238636]" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2">Real Projects</h3>
-              <p className="text-[#8b949e] group-hover:text-white transition-colors duration-300">
-                Work on actual projects that impact thousands of users. Build your portfolio while making a difference.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-lg border border-[#30363d] bg-[#161b22] hover:border-[#238636] transition-all duration-300 group">
-              <div className="p-3 rounded-lg bg-[#238636]/10 w-fit mb-4 group-hover:scale-110 transition-transform duration-300">
-                <Users className="w-6 h-6 text-[#238636]" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2">Expert Mentorship</h3>
-              <p className="text-[#8b949e] group-hover:text-white transition-colors duration-300">
-                Get guidance from experienced developers and industry professionals throughout your journey.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-lg border border-[#30363d] bg-[#161b22] hover:border-[#238636] transition-all duration-300 group">
-              <div className="p-3 rounded-lg bg-[#238636]/10 w-fit mb-4 group-hover:scale-110 transition-transform duration-300">
-                <Trophy className="w-6 h-6 text-[#238636]" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2">Team Membership</h3>
-              <p className="text-[#8b949e] group-hover:text-white transition-colors duration-300">
-                Top performers get direct entry into the NST SDC team with exciting roles and responsibilities.
-              </p>
-            </div>
-          </div>
-
           <div className="max-w-4xl mx-auto mt-24 relative">
             <div className="absolute left-1/2 transform -translate-x-1/2 h-full w-px bg-[#30363d]" />
             <div className="space-y-16 relative">
               <div className="flex items-center gap-8">
                 <div className="w-1/2 text-right">
                   <div className="bg-[#161b22] p-6 rounded-lg border border-[#30363d] hover:border-[#238636] transition-all duration-300 group">
-                    <div className="text-sm font-mono text-[#238636] mb-2">March 1</div>
+                    <div className="text-sm font-mono text-[#238636] mb-2">March 25</div>
                     <h3 className="text-lg font-bold text-white mb-2">Registration Opens</h3>
                     <p className="text-[#8b949e] group-hover:text-white transition-colors duration-300">
                       Sign up and choose your track - Developer or Creative Lead
@@ -165,7 +129,7 @@ export default function Home() {
               <div className="flex items-center gap-8 flex-row-reverse">
                 <div className="w-1/2">
                   <div className="bg-[#161b22] p-6 rounded-lg border border-[#30363d] hover:border-[#238636] transition-all duration-300 group">
-                    <div className="text-sm font-mono text-[#238636] mb-2">March 15</div>
+                    <div className="text-sm font-mono text-[#238636] mb-2"></div>
                     <h3 className="text-lg font-bold text-white mb-2">Contribution Phase</h3>
                     <p className="text-[#8b949e] group-hover:text-white transition-colors duration-300">
                       Start working on issues and submitting pull requests
@@ -182,7 +146,7 @@ export default function Home() {
               <div className="flex items-center gap-8">
                 <div className="w-1/2 text-right">
                   <div className="bg-[#161b22] p-6 rounded-lg border border-[#30363d] hover:border-[#238636] transition-all duration-300 group">
-                    <div className="text-sm font-mono text-[#238636] mb-2">April 15</div>
+                    <div className="text-sm font-mono text-[#238636] mb-2">March 25</div>
                     <h3 className="text-lg font-bold text-white mb-2">Final Evaluation</h3>
                     <p className="text-[#8b949e] group-hover:text-white transition-colors duration-300">
                       Top contributors will be selected for the team
