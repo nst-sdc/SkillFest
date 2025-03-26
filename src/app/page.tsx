@@ -1,7 +1,7 @@
 'use client';
 
 import { SignInButton } from "@/components/sign-in-button";
-import { ArrowRight, Code, Palette, Sparkles, Zap, Trophy, Users, GitBranch } from "lucide-react";
+import { ArrowRight, Code, Sparkles, Zap, Trophy, Users, GitBranch } from "lucide-react";
 import Link from "next/link";
 import { useState } from 'react';
 import { useSession } from "next-auth/react";
@@ -82,13 +82,13 @@ export default function Home() {
           />
           
           <CategoryCard
-            title="Creative Lead + Developer"
-            description="Lead our creative initiatives and shape our brand identity"
-            icon={<Palette className="w-6 h-6 text-[#F778BA]" />}
+            title="Fresher Developer"
+            description="Join our team as a new developer and learn while you contribute"
+            icon={<Code className="w-6 h-6 text-[#A371F7]" />}
             points={[
-              "Design brand assets",
-              "Create visual content",
-              "Lead creative projects"
+              "No experience required",
+              "Learn from senior developers",
+              "Work on beginner-friendly tasks"
             ]}
           />
         </div>
@@ -239,6 +239,9 @@ function CategoryCard({
       setTimeout(() => {
         router.push('/skillfest');
       }, 2000);
+    } else if (title === "Fresher Developer") {
+      e.preventDefault();
+      router.push('/fresher-application');
     }
   };
 

@@ -40,7 +40,7 @@ type UserResponse = {
 export default function Leaderboard() {
   const { data: session, status } = useSession();
   const [contributors, setContributors] = useState<Contributor[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchAllLoggedInUsers = useCallback(async () => {
@@ -149,6 +149,21 @@ export default function Leaderboard() {
       default: return 'text-gray-400';
     }
   }
+
+  // Find the current user in the leaderboard with null checks
+  const currentUser = contributors.find(c => {
+    if (!session?.user?.name) return false;
+    try {
+      return c.login.toLowerCase() === session.user.name.toLowerCase();
+    } catch (e) {
+      console.error("Error comparing usernames:", e);
+      return false;
+    }
+  });
+
+  // Add a safe check for the user's rank
+  const userRank = currentUser?.rank || 0;
+  const isQualifying = userRank > 0 && userRank <= 15;
 
   return (
     <div className="min-h-screen bg-[#0d1117]">
@@ -291,6 +306,60 @@ export default function Leaderboard() {
               </div>
             </div>
           </div>
+
+          {/* Current user status - Add null checks */}
+          {session?.user && currentUser && (
+            <div className="mt-12 p-6 rounded-lg border border-[#30363d] bg-[#161b22]">
+              <div className="flex flex-col md:flex-row items-center gap-6">
+                <div className="flex items-center gap-4">
+                  <Image 
+                    src={currentUser.avatar_url}
+                    alt={currentUser.login}
+                    width={64}
+                    height={64}
+                    className="rounded-full border-2 border-[#238636]"
+                  />
+                  <div>
+                    <h2 className="text-xl font-bold text-white">{currentUser.login}</h2>
+                    <p className="text-[#8b949e]">
+                      Rank: <span className="text-white">#{currentUser.rank}</span>
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-3 rounded-lg bg-[#0d1117]">
+                    <div className="text-2xl font-bold text-white">{currentUser.pullRequests.total}</div>
+                    <div className="text-xs text-[#8b949e]">Total PRs</div>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-[#0d1117]">
+                    <div className="text-2xl font-bold text-[#238636]">{currentUser.pullRequests.merged}</div>
+                    <div className="text-xs text-[#8b949e]">Merged PRs</div>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-[#0d1117]">
+                    <div className="text-2xl font-bold text-[#F778BA]">{currentUser.points}</div>
+                    <div className="text-xs text-[#8b949e]">Points</div>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-[#0d1117]">
+                    <div className="text-2xl font-bold text-[#A371F7]">{currentUser.level}</div>
+                    <div className="text-xs text-[#8b949e]">Level</div>
+                  </div>
+                </div>
+                
+                <div>
+                  {isQualifying ? (
+                    <div className="px-4 py-2 bg-[#238636] text-white rounded-full text-sm">
+                      Currently Qualifying
+                    </div>
+                  ) : (
+                    <div className="px-4 py-2 bg-[#8b949e]/20 text-[#8b949e] rounded-full text-sm">
+                      Not Yet Qualifying
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>

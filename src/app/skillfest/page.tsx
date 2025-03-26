@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession } from "next-auth/react";
-import { ArrowLeft, Github, Code, GitPullRequest, ExternalLink, Trophy } from "lucide-react";
+import { ArrowLeft, Github, Code, GitPullRequest, ExternalLink, Trophy, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { SignInButton } from "@/components/sign-in-button";
 import { useEffect, useState } from "react";
@@ -184,7 +184,7 @@ export default function SkillFest() {
               </h1>
               <p className="text-xl text-[#8b949e] max-w-2xl mx-auto">
                 Join our elite development team through a 
-                <span className="text-white"> month-long </span> 
+                <span className="text-white"> week-long </span> 
                 open source contribution program
               </p>
             </div>
@@ -193,7 +193,7 @@ export default function SkillFest() {
             <div className="grid grid-cols-3 gap-4 max-w-3xl mx-auto mt-12">
               <StatsBox number="15" label="Positions" />
               <StatsBox number={issues.length.toString()} label="Challenges" />
-              <StatsBox number="30" label="Days" />
+              <StatsBox number="7" label="Days" />
             </div>
           </div>
         </div>
@@ -285,6 +285,59 @@ export default function SkillFest() {
             View Complete Leaderboard
             <ArrowLeft className="w-4 h-4 rotate-180" />
           </Link>
+        </div>
+
+        {/* Leaderboard Information */}
+        <div className="mb-24">
+          <div className="max-w-4xl mx-auto p-8 rounded-lg border border-[#30363d] bg-[#161b22]/80 backdrop-blur-sm">
+            <h2 className="text-2xl font-bold text-white mb-4">Leaderboard & Selection Criteria</h2>
+            
+            <div className="space-y-6 text-[#8b949e]">
+              <p>
+                The SkillFest 2025 leaderboard ranks contributors based on their activity and contributions. 
+                The <strong className="text-white">top 15 contributors</strong> will be selected to join our team.
+              </p>
+              
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-2">Points System</h3>
+                <ul className="list-disc pl-5 space-y-2">
+                  <li>Merged PR to organization repositories: <span className="text-[#238636]">10 points</span></li>
+                  <li>Merged PR to other repositories: <span className="text-[#238636]">5 points</span></li>
+                  <li>Open PR to organization repositories: <span className="text-[#238636]">3 points</span></li>
+                  <li>Open PR to other repositories: <span className="text-[#238636]">1 point</span></li>
+                </ul>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-2">Minimum Requirements</h3>
+                <ul className="list-disc pl-5 space-y-2">
+                  <li>At least 3 merged pull requests</li>
+                  <li>At least 1 merged pull request to an organization repository</li>
+                  <li>Minimum 20 points total</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-2">Contributor Levels</h3>
+                <ul className="list-disc pl-5 space-y-2">
+                  <li><span className="text-purple-400">Expert</span>: 100+ points</li>
+                  <li><span className="text-blue-400">Advanced</span>: 50-99 points</li>
+                  <li><span className="text-green-400">Intermediate</span>: 20-49 points</li>
+                  <li><span className="text-yellow-400">Beginner</span>: 1-19 points</li>
+                </ul>
+              </div>
+              
+              <div className="pt-2">
+                <Link 
+                  href="/skillfest/leaderboard"
+                  className="inline-flex items-center gap-2 text-[#238636] hover:text-white transition-colors"
+                >
+                  View Complete Leaderboard
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Show loading state while fetching */}

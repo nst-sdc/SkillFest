@@ -36,16 +36,6 @@ export const authOptions: AuthOptions = {
       session.accessToken = token.accessToken as string;
       return session;
     },
-    async signIn() {
-      try {
-        // Record the login
-        await fetch('/api/logged-in-users', { method: 'POST' });
-        return true;
-      } catch (error) {
-        console.error('Error recording login:', error);
-        return true; // Still allow sign in
-      }
-    },
   },
-  debug: true,
+  debug: process.env.NODE_ENV === 'development',
 }; 

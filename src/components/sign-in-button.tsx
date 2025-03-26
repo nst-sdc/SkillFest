@@ -15,23 +15,22 @@ export function SignInButton() {
       if (session?.user) {
         try {
           console.log('Attempting to update stats for user:', session.user);
+          
           const response = await fetch('/api/logged-in-users', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-            }
+            },
           });
           
           if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Error response from API:', errorData);
-            return;
+            throw new Error(`API responded with status: ${response.status}`);
           }
           
-          const result = await response.json();
-          console.log('Successfully updated user stats:', result);
+          const data = await response.json();
+          console.log('Stats updated successfully:', data);
         } catch (error) {
-          console.error('Error updating stats on login:', error);
+          console.error('Error updating stats:', error);
         }
       }
     };
