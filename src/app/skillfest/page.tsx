@@ -90,22 +90,77 @@ export default function SkillFest() {
 
   const fetchIssues = async (token: string) => {
     setLoading(true);
+    
+    // Check for cached issues first
+    const cachedIssues = localStorage.getItem('cachedIssues');
+    const cachedTimestamp = localStorage.getItem('cachedIssuesTimestamp');
+    
+    if (cachedIssues && cachedTimestamp) {
+      const cacheAge = Date.now() - parseInt(cachedTimestamp);
+      // Use cache if less than 5 minutes old
+      if (cacheAge < 5 * 60 * 1000) {
+        console.log('Using cached issues data');
+        setIssues(JSON.parse(cachedIssues));
+        setLoading(false);
+        return;
+      }
+    }
+    
     try {
+      // Check rate limit first
+      const rateLimitResponse = await fetch('https://api.github.com/rate_limit', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'SkillFest-App'
+        }
+      });
+      
+      if (rateLimitResponse.ok) {
+        const rateData = await rateLimitResponse.json();
+        console.log('GitHub API Rate Limit:', {
+          remaining: rateData.rate.remaining,
+          limit: rateData.rate.limit,
+          resetAt: new Date(rateData.rate.reset * 1000).toLocaleTimeString()
+        });
+        
+        // If rate limited and we have cache, use it
+        if (rateData.rate.remaining < 10 && cachedIssues) {
+          console.log('Rate limit low, using cached data');
+          setIssues(JSON.parse(cachedIssues));
+          setLoading(false);
+          return;
+        }
+      }
+      
       // First, get all repositories (both public and private)
       const reposResponse = await fetch('https://api.github.com/orgs/nst-sdc/repos?type=all&per_page=100', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'SkillFest-App'
         },
         cache: 'no-store',
       });
 
       if (!reposResponse.ok) {
+        console.error(`GitHub API error (${reposResponse.status}):`, await reposResponse.text());
         throw new Error(`GitHub API error: ${reposResponse.status}`);
       }
 
       const repos: Array<{ name: string }> = await reposResponse.json();
-      console.log('Found repositories:', repos.map(r => r.name)); // Debug log
+      console.log('Found repositories:', repos.map(r => r.name));
+      
+      // If no repos found, try to use mock data for testing
+      if (repos.length === 0) {
+        console.log('No repositories found, using mock data');
+        const mockIssues = getMockIssues();
+        setIssues(mockIssues);
+        localStorage.setItem('cachedIssues', JSON.stringify(mockIssues));
+        localStorage.setItem('cachedIssuesTimestamp', Date.now().toString());
+        setLoading(false);
+        return;
+      }
       
       // Then, fetch issues from each repository
       const allIssuesPromises = repos.map(async (repo: { name: string }) => {
@@ -114,6 +169,7 @@ export default function SkillFest() {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'SkillFest-App'
           },
           cache: 'no-store',
         });
@@ -133,13 +189,65 @@ export default function SkillFest() {
 
       const allIssues = await Promise.all(allIssuesPromises);
       const flattenedIssues = allIssues.flat();
-      console.log('Total issues found:', flattenedIssues.length); // Debug log
+      console.log('Total issues found:', flattenedIssues.length);
+      
+      // Cache the results
+      localStorage.setItem('cachedIssues', JSON.stringify(flattenedIssues));
+      localStorage.setItem('cachedIssuesTimestamp', Date.now().toString());
+      
       setIssues(flattenedIssues);
     } catch (error) {
       console.error('Error fetching issues:', error);
+      
+      // Use cached data as fallback if available
+      if (cachedIssues) {
+        console.log('Error occurred, using cached data as fallback');
+        setIssues(JSON.parse(cachedIssues));
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  // Add this function for mock data when testing
+  const getMockIssues = (): Issue[] => {
+    return [
+      {
+        id: 1,
+        title: "Fix navigation bar responsiveness",
+        html_url: "https://github.com/nst-sdc/frontend/issues/1",
+        repository: {
+          name: "frontend"
+        },
+        labels: [
+          { name: "bug", color: "d73a4a" },
+          { name: "good first issue", color: "7057ff" }
+        ]
+      },
+      {
+        id: 2,
+        title: "Implement user authentication flow",
+        html_url: "https://github.com/nst-sdc/backend/issues/2",
+        repository: {
+          name: "backend"
+        },
+        labels: [
+          { name: "enhancement", color: "a2eeef" },
+          { name: "authentication", color: "0075ca" }
+        ]
+      },
+      {
+        id: 3,
+        title: "Add unit tests for API endpoints",
+        html_url: "https://github.com/nst-sdc/backend/issues/3",
+        repository: {
+          name: "backend"
+        },
+        labels: [
+          { name: "testing", color: "0e8a16" }
+        ]
+      }
+    ];
   };
 
   return (

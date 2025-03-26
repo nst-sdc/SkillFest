@@ -1,7 +1,7 @@
 'use client';
 
 import { SignInButton } from "@/components/sign-in-button";
-import { ArrowRight, Code, Sparkles, Zap, Trophy, Users, GitBranch } from "lucide-react";
+import { ArrowRight, Code, Sparkles, Zap, Trophy, Users, GitBranch, GitPullRequest, Check } from "lucide-react";
 import Link from "next/link";
 import { useState } from 'react';
 import { useSession } from "next-auth/react";
@@ -65,6 +65,141 @@ export default function Home() {
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-[#238636]/10 flex items-center justify-center text-[#238636] font-medium">3</div>
               <span className="text-[#8b949e]">Start Contributing</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Program Information - ENHANCED */}
+        <div className="mt-16 mb-24 max-w-5xl mx-auto relative">
+          {/* Background elements */}
+          <div className="absolute -top-20 -left-20 w-40 h-40 bg-[#238636]/10 rounded-full blur-3xl opacity-30" />
+          <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-[#A371F7]/10 rounded-full blur-3xl opacity-30" />
+          
+          <div className="text-center mb-10">
+            <h2 className="text-4xl font-bold mb-3 bg-gradient-to-r from-[#238636] via-white to-[#A371F7] inline-block text-transparent bg-clip-text">Choose Your Path</h2>
+            <p className="text-[#8b949e] max-w-2xl mx-auto">Select the program that best matches your experience level and goals</p>
+          </div>
+          
+          <div className="p-8 rounded-2xl bg-gradient-to-br from-[#161b22] to-[#0d1117] border border-[#30363d] shadow-xl relative overflow-hidden">
+            {/* Decorative elements */}
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#238636] to-[#A371F7]" />
+            <div className="absolute -top-24 -right-24 w-48 h-48 bg-[#238636]/5 rounded-full blur-2xl" />
+            <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-[#A371F7]/5 rounded-full blur-2xl" />
+            
+            <div className="grid md:grid-cols-2 gap-10">
+              {/* Developer Card */}
+              <div className="group relative p-6 rounded-xl bg-[#0d1117]/70 border border-[#30363d] hover:border-[#238636] transition-all duration-300 overflow-hidden">
+                {/* Hover effect */}
+                <div className="absolute inset-0 bg-gradient-to-br from-[#238636]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                
+                <div className="relative">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="p-4 rounded-full bg-[#238636]/10 transform group-hover:scale-110 transition-transform duration-300">
+                      <Code className="w-7 h-7 text-[#238636]" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold text-white mb-1">Developer Program</h3>
+                      <div className="h-1 w-16 bg-[#238636] rounded-full transform origin-left group-hover:scale-x-125 transition-transform duration-300" />
+                    </div>
+                  </div>
+                  
+                  <div className="absolute top-2 right-2 px-3 py-1 rounded-full bg-[#238636]/10 text-[#238636] text-xs font-medium">
+                    15 positions
+                  </div>
+                  
+                  <p className="text-[#8b949e] mb-6 group-hover:text-white transition-colors duration-300">
+                    For those with web development or programming experience. Join the SkillFest challenge to compete for a developer position.
+                  </p>
+                  
+                  <ul className="space-y-3 mb-6">
+                    <li className="flex items-start gap-3 text-[#8b949e] group-hover:text-white transition-colors duration-300">
+                      <div className="p-1 mt-0.5 rounded-full bg-[#238636]/20 flex-shrink-0">
+                        <Check className="w-3 h-3 text-[#238636]" />
+                      </div>
+                      <span>Contribute to real open source projects</span>
+                    </li>
+                    <li className="flex items-start gap-3 text-[#8b949e] group-hover:text-white transition-colors duration-300">
+                      <div className="p-1 mt-0.5 rounded-full bg-[#238636]/20 flex-shrink-0">
+                        <Check className="w-3 h-3 text-[#238636]" />
+                      </div>
+                      <span>Compete in the leaderboard challenge</span>
+                    </li>
+                    <li className="flex items-start gap-3 text-[#8b949e] group-hover:text-white transition-colors duration-300">
+                      <div className="p-1 mt-0.5 rounded-full bg-[#238636]/20 flex-shrink-0">
+                        <Check className="w-3 h-3 text-[#238636]" />
+                      </div>
+                      <span>Showcase your existing skills</span>
+                    </li>
+                  </ul>
+                  
+                  <div className="pt-4 border-t border-[#30363d]">
+                    <div className="flex items-center gap-2 text-[#8b949e]">
+                      <Trophy className="w-4 h-4 text-[#238636]" />
+                      <span>Top performers selected based on contributions</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Fresher Developer Card */}
+              <div className="group relative p-6 rounded-xl bg-[#0d1117]/70 border border-[#30363d] hover:border-[#A371F7] transition-all duration-300 overflow-hidden">
+                {/* Hover effect */}
+                <div className="absolute inset-0 bg-gradient-to-br from-[#A371F7]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                
+                <div className="relative">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="p-4 rounded-full bg-[#A371F7]/10 transform group-hover:scale-110 transition-transform duration-300">
+                      <GitPullRequest className="w-7 h-7 text-[#A371F7]" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold text-white mb-1">Fresher Developer</h3>
+                      <div className="h-1 w-16 bg-[#A371F7] rounded-full transform origin-left group-hover:scale-x-125 transition-transform duration-300" />
+                    </div>
+                  </div>
+                  
+                  <div className="absolute top-2 right-2 px-3 py-1 rounded-full bg-[#A371F7]/10 text-[#A371F7] text-xs font-medium">
+                    5 positions
+                  </div>
+                  
+                  <p className="text-[#8b949e] mb-6 group-hover:text-white transition-colors duration-300">
+                    New to coding? Apply to our Fresher Developer program with limited seats to learn as you contribute.
+                  </p>
+                  
+                  <ul className="space-y-3 mb-6">
+                    <li className="flex items-start gap-3 text-[#8b949e] group-hover:text-white transition-colors duration-300">
+                      <div className="p-1 mt-0.5 rounded-full bg-[#A371F7]/20 flex-shrink-0">
+                        <Check className="w-3 h-3 text-[#A371F7]" />
+                      </div>
+                      <span>No experience required</span>
+                    </li>
+                    <li className="flex items-start gap-3 text-[#8b949e] group-hover:text-white transition-colors duration-300">
+                      <div className="p-1 mt-0.5 rounded-full bg-[#A371F7]/20 flex-shrink-0">
+                        <Check className="w-3 h-3 text-[#A371F7]" />
+                      </div>
+                      <span>Mentorship from senior developers</span>
+                    </li>
+                    <li className="flex items-start gap-3 text-[#8b949e] group-hover:text-white transition-colors duration-300">
+                      <div className="p-1 mt-0.5 rounded-full bg-[#A371F7]/20 flex-shrink-0">
+                        <Check className="w-3 h-3 text-[#A371F7]" />
+                      </div>
+                      <span>Learn at your own pace with beginner-friendly tasks</span>
+                    </li>
+                  </ul>
+                  
+                  <div className="pt-4 border-t border-[#30363d]">
+                    <div className="flex items-center gap-2 text-[#8b949e]">
+                      <Users className="w-4 h-4 text-[#A371F7]" />
+                      <span>Limited positions available for beginners</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-8 text-center">
+              <p className="text-sm text-[#8b949e]">
+                Choose the path that best fits your current skill level and career goals
+              </p>
             </div>
           </div>
         </div>
