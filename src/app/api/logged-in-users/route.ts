@@ -219,6 +219,7 @@ export async function POST() {
     const points = calculatePoints(contributionData);
     const level = getContributionLevel(points);
     
+    // Store in Firebase
     const userStats = {
       login: githubUser.login,
       lastActive: new Date(),

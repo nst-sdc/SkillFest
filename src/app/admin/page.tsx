@@ -349,19 +349,19 @@ export default function AdminPortal() {
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {users.find(u => u.login === selectedUser)?.stats && (
                           <>
-                            <div className="bg-[#0d1117] rounded-lg p-4">
+                            <div key="total-prs" className="bg-[#0d1117] rounded-lg p-4">
                               <div className="text-[#8b949e] text-xs mb-1">Total PRs</div>
                               <div className="text-xl font-bold">{users.find(u => u.login === selectedUser)?.stats.totalPRs}</div>
                             </div>
-                            <div className="bg-[#0d1117] rounded-lg p-4">
+                            <div key="merged-prs" className="bg-[#0d1117] rounded-lg p-4">
                               <div className="text-[#8b949e] text-xs mb-1">Merged PRs</div>
                               <div className="text-xl font-bold">{users.find(u => u.login === selectedUser)?.stats.mergedPRs}</div>
                             </div>
-                            <div className="bg-[#0d1117] rounded-lg p-4">
+                            <div key="org-prs" className="bg-[#0d1117] rounded-lg p-4">
                               <div className="text-[#8b949e] text-xs mb-1">Org PRs</div>
                               <div className="text-xl font-bold">{users.find(u => u.login === selectedUser)?.stats.orgPRs} / {users.find(u => u.login === selectedUser)?.stats.orgMergedPRs}</div>
                             </div>
-                            <div className="bg-[#0d1117] rounded-lg p-4">
+                            <div key="points" className="bg-[#0d1117] rounded-lg p-4">
                               <div className="text-[#8b949e] text-xs mb-1">Points</div>
                               <div className="text-xl font-bold text-[#238636]">{users.find(u => u.login === selectedUser)?.stats.points}</div>
                             </div>
@@ -370,69 +370,136 @@ export default function AdminPortal() {
                       </div>
                     </div>
                     
+                    <div className="mb-6">
+                      <h3 className="text-lg font-medium mb-3">Points Breakdown</h3>
+                      <div className="bg-[#0d1117] rounded-lg p-4">
+                        {users.find(u => u.login === selectedUser)?.stats && (
+                          <>
+                            <div className="grid grid-cols-1 gap-2">
+                              <div className="flex justify-between items-center py-2 border-b border-[#30363d]">
+                                <div className="text-[#8b949e]">Organization PRs Created</div>
+                                <div className="flex items-center">
+                                  <span className="text-white font-medium mr-2">
+                                    {users.find(u => u.login === selectedUser)?.stats.orgPRs || 0}
+                                  </span>
+                                  <span className="text-[#8b949e]">×</span>
+                                  <span className="text-[#f778ba] mx-2">5</span>
+                                  <span className="text-[#8b949e]">=</span>
+                                  <span className="text-[#238636] font-bold ml-2">
+                                    {(users.find(u => u.login === selectedUser)?.stats.orgPRs || 0) * 5}
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              <div className="flex justify-between items-center py-2 border-b border-[#30363d]">
+                                <div className="text-[#8b949e]">Organization PRs Merged</div>
+                                <div className="flex items-center">
+                                  <span className="text-white font-medium mr-2">
+                                    {users.find(u => u.login === selectedUser)?.stats.orgMergedPRs || 0}
+                                  </span>
+                                  <span className="text-[#8b949e]">×</span>
+                                  <span className="text-[#f778ba] mx-2">15</span>
+                                  <span className="text-[#8b949e]">=</span>
+                                  <span className="text-[#238636] font-bold ml-2">
+                                    {(users.find(u => u.login === selectedUser)?.stats.orgMergedPRs || 0) * 15}
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              <div className="flex justify-between items-center py-2 border-b border-[#30363d]">
+                                <div className="text-[#8b949e]">Contributions (Commits)</div>
+                                <div className="flex items-center">
+                                  <span className="text-white font-medium mr-2">
+                                    {users.find(u => u.login === selectedUser)?.stats.contributions || 0}
+                                  </span>
+                                  <span className="text-[#8b949e]">×</span>
+                                  <span className="text-[#f778ba] mx-2">2</span>
+                                  <span className="text-[#8b949e]">=</span>
+                                  <span className="text-[#238636] font-bold ml-2">
+                                    {(users.find(u => u.login === selectedUser)?.stats.contributions || 0) * 2}
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              <div className="flex justify-between items-center py-2 mt-2">
+                                <div className="text-white font-medium">Total Points</div>
+                                <div className="text-xl font-bold text-[#238636]">
+                                  {users.find(u => u.login === selectedUser)?.stats.points}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="mt-4 text-xs text-[#8b949e] bg-[#161b22] p-3 rounded border border-[#30363d]">
+                              <p className="mb-1">Points are calculated based on:</p>
+                              <ul className="list-disc pl-5 space-y-1">
+                                <li>Organization PRs Created: 5 points each</li>
+                                <li>Organization PRs Merged: 15 points each</li>
+                                <li>Contributions (Commits): 2 points each</li>
+                              </ul>
+                              <p className="mt-2">Note: General PRs outside the organization are tracked but don&apos;t contribute to points.</p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    
                     <div className="flex justify-between items-center mb-4">
-                      <div className="flex gap-2">
+                      <div className="flex space-x-2 mb-4">
                         <button
+                          key="filter-all"
                           onClick={() => setPrFilter('all')}
-                          className={`px-3 py-1 rounded-md text-sm ${
-                            prFilter === 'all' 
-                              ? 'bg-[#30363d] text-white' 
-                              : 'bg-transparent text-[#8b949e] hover:text-white'
+                          className={`px-3 py-1 text-sm rounded-md ${
+                            prFilter === 'all' ? 'bg-[#30363d] text-white' : 'bg-[#0d1117] text-[#8b949e]'
                           }`}
                         >
                           All
                         </button>
                         <button
+                          key="filter-open"
                           onClick={() => setPrFilter('open')}
-                          className={`px-3 py-1 rounded-md text-sm ${
-                            prFilter === 'open' 
-                              ? 'bg-[#238636] text-white' 
-                              : 'bg-transparent text-[#8b949e] hover:text-white'
+                          className={`px-3 py-1 text-sm rounded-md ${
+                            prFilter === 'open' ? 'bg-[#30363d] text-white' : 'bg-[#0d1117] text-[#8b949e]'
                           }`}
                         >
                           Open
                         </button>
                         <button
+                          key="filter-merged"
                           onClick={() => setPrFilter('merged')}
-                          className={`px-3 py-1 rounded-md text-sm ${
-                            prFilter === 'merged' 
-                              ? 'bg-[#8957e5] text-white' 
-                              : 'bg-transparent text-[#8b949e] hover:text-white'
+                          className={`px-3 py-1 text-sm rounded-md ${
+                            prFilter === 'merged' ? 'bg-[#30363d] text-white' : 'bg-[#0d1117] text-[#8b949e]'
                           }`}
                         >
                           Merged
                         </button>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex space-x-2 mb-4">
                         <button
+                          key="org-all"
                           onClick={() => setOrgFilter('all')}
-                          className={`px-3 py-1 rounded-md text-sm ${
-                            orgFilter === 'all' 
-                              ? 'bg-[#30363d] text-white' 
-                              : 'bg-transparent text-[#8b949e] hover:text-white'
+                          className={`px-3 py-1 text-sm rounded-md ${
+                            orgFilter === 'all' ? 'bg-[#30363d] text-white' : 'bg-[#0d1117] text-[#8b949e]'
                           }`}
                         >
-                          All
+                          All Repositories
                         </button>
                         <button
+                          key="org-org"
                           onClick={() => setOrgFilter('org')}
-                          className={`px-3 py-1 rounded-md text-sm ${
-                            orgFilter === 'org' 
-                              ? 'bg-[#238636] text-white' 
-                              : 'bg-transparent text-[#8b949e] hover:text-white'
+                          className={`px-3 py-1 text-sm rounded-md ${
+                            orgFilter === 'org' ? 'bg-[#30363d] text-white' : 'bg-[#0d1117] text-[#8b949e]'
                           }`}
                         >
-                          Organization
+                          Organization Only
                         </button>
                         <button
+                          key="org-personal"
                           onClick={() => setOrgFilter('personal')}
-                          className={`px-3 py-1 rounded-md text-sm ${
-                            orgFilter === 'personal' 
-                              ? 'bg-[#8957e5] text-white' 
-                              : 'bg-transparent text-[#8b949e] hover:text-white'
+                          className={`px-3 py-1 text-sm rounded-md ${
+                            orgFilter === 'personal' ? 'bg-[#30363d] text-white' : 'bg-[#0d1117] text-[#8b949e]'
                           }`}
                         >
-                          Personal
+                          Personal Only
                         </button>
                       </div>
                     </div>

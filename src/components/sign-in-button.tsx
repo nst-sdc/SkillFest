@@ -93,7 +93,7 @@ export function SignInButton() {
           <div 
             className="absolute bottom-0 left-0 h-[2px] w-full bg-gradient-to-r from-[#F778BA] to-[#A371F7] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"
           />
-        </div>
+        </div>Currently Qualifying
       </button>
 
       {showLoginPopup && <LoginPopup onClose={() => setShowLoginPopup(false)} />}

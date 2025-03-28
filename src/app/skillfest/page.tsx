@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react";
 import { ArrowLeft, Github, Code, GitPullRequest, ExternalLink, Trophy, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { SignInButton } from "@/components/sign-in-button";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { LoginPopup } from "@/components/login-popup";
 import Image from 'next/image';
 
@@ -50,45 +50,7 @@ export default function SkillFest() {
     };
   }>>([]);
 
-  useEffect(() => {
-    if (session?.accessToken) {
-      fetchIssues(session.accessToken);
-      
-      // Set up periodic refresh every 30 seconds
-      const refreshInterval = setInterval(() => {
-        fetchIssues(session.accessToken!);
-      }, 30000);
-
-      return () => clearInterval(refreshInterval);
-    }
-  }, [session]);
-
-  useEffect(() => {
-    const fetchTopUsers = async () => {
-      try {
-        const response = await fetch('/api/logged-in-users');
-        if (!response.ok) throw new Error('Failed to fetch users');
-        
-        const users = await response.json() as UserData[];
-        
-        // Use the UserData type for sorting
-        const sortedUsers = users.sort((a: UserData, b: UserData) => {
-          if (b.stats.mergedPRs !== a.stats.mergedPRs) {
-            return b.stats.mergedPRs - a.stats.mergedPRs;
-          }
-          return b.stats.totalPRs - a.stats.totalPRs;
-        });
-
-        setTopUsers(sortedUsers.slice(0, 3));
-      } catch (error) {
-        console.error('Error fetching top users:', error);
-      }
-    };
-
-    fetchTopUsers();
-  }, []);
-
-  const fetchIssues = async (token: string) => {
+  const fetchIssues = useCallback(async (token: string) => {
     setLoading(true);
     
     // Check for cached issues first
@@ -207,7 +169,38 @@ export default function SkillFest() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (session) {
+      fetchIssues(session.accessToken!);
+    }
+  }, [session, fetchIssues]);
+
+  useEffect(() => {
+    const fetchTopUsers = async () => {
+      try {
+        const response = await fetch('/api/logged-in-users');
+        if (!response.ok) throw new Error('Failed to fetch users');
+        
+        const users = await response.json() as UserData[];
+        
+        // Use the UserData type for sorting
+        const sortedUsers = users.sort((a: UserData, b: UserData) => {
+          if (b.stats.mergedPRs !== a.stats.mergedPRs) {
+            return b.stats.mergedPRs - a.stats.mergedPRs;
+          }
+          return b.stats.totalPRs - a.stats.totalPRs;
+        });
+
+        setTopUsers(sortedUsers.slice(0, 3));
+      } catch (error) {
+        console.error('Error fetching top users:', error);
+      }
+    };
+
+    fetchTopUsers();
+  }, []);
 
   // Add this function for mock data when testing
   const getMockIssues = (): Issue[] => {
