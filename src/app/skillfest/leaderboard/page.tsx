@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession } from "next-auth/react";
-import { ArrowLeft, Trophy, GitPullRequest, Star, Award } from "lucide-react";
+import { ArrowLeft, Trophy, GitPullRequest, Star, Award, Lock } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
 import Image from 'next/image';
@@ -34,7 +34,14 @@ type UserResponse = {
     orgMergedPRs?: number;
     points?: number;
     level?: string;
+    manualRank?: number;
   };
+};
+
+// Add leaderboard settings type
+type LeaderboardSettings = {
+  visible: boolean;
+  lastUpdated: string;
 };
 
 export default function Leaderboard() {
@@ -42,6 +49,33 @@ export default function Leaderboard() {
   const [contributors, setContributors] = useState<Contributor[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [leaderboardSettings, setLeaderboardSettings] = useState<LeaderboardSettings>({
+    visible: true,
+    lastUpdated: ''
+  });
+
+  // Fetch leaderboard settings
+  const fetchLeaderboardSettings = useCallback(async () => {
+    try {
+      console.log("Leaderboard: Fetching settings");
+      const response = await fetch('/api/leaderboard-settings');
+      const data = await response.json();
+      console.log("Leaderboard: Received settings:", data);
+      
+      // Ensure visibility is treated as a boolean
+      setLeaderboardSettings({
+        visible: data.visible === true,
+        lastUpdated: data.lastUpdated
+      });
+      
+      // If leaderboard is hidden, don't bother fetching users
+      if (!data.visible) {
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error("Leaderboard: Error fetching settings:", error);
+    }
+  }, []);
 
   const fetchAllLoggedInUsers = useCallback(async () => {
     setLoading(true);
@@ -51,59 +85,41 @@ export default function Leaderboard() {
       
       const users = (await response.json()) as UserResponse[];
       
-      // Recalculate points for each user to ensure consistency
-      const usersWithCorrectPoints = users.map(user => {
-        // Get the raw stats
-        const totalPRs = user.stats.totalPRs || 0;
-        const mergedPRs = user.stats.mergedPRs || 0;
-        const orgPRs = user.stats.orgPRs || 0;
-        const orgMergedPRs = user.stats.orgMergedPRs || 0;
-        
-        // Calculate points using the same formula as in points-calculator.ts
-        const orgPRPoints = orgPRs * 10; // ORG_PR_CREATED
-        const orgMergedPRPoints = orgMergedPRs * 15; // ORG_PR_MERGED
-        const generalPRs = Math.max(0, totalPRs - orgPRs);
-        const generalMergedPRs = Math.max(0, mergedPRs - orgMergedPRs);
-        const generalPRPoints = generalPRs * 5; // GENERAL_PR_CREATED
-        const generalMergedPRPoints = generalMergedPRs * 7; // GENERAL_PR_MERGED
-        
-        // Calculate total points
-        const calculatedPoints = orgPRPoints + orgMergedPRPoints + generalPRPoints + generalMergedPRPoints;
-        
-        // Determine level based on calculated points
-        let level = 'Newcomer';
-        if (calculatedPoints >= 200) level = 'Expert';
-        else if (calculatedPoints >= 100) level = 'Advanced';
-        else if (calculatedPoints >= 50) level = 'Intermediate';
-        else if (calculatedPoints >= 20) level = 'Beginner';
-        
-        return {
+      // Sort users by manual rank first, then by points
+      const sortedUsers = users
+        .map(user => ({
           ...user,
           stats: {
             ...user.stats,
-            points: calculatedPoints,
-            level: level
+            manualRank: user.stats.manualRank || null
           }
-        };
-      });
-      
-      // Sort users by recalculated points
-      const sortedUsers = usersWithCorrectPoints.sort((a, b) => {
-        if ((b.stats.points || 0) !== (a.stats.points || 0)) {
-          return (b.stats.points || 0) - (a.stats.points || 0);
-        }
-        if (b.stats.mergedPRs !== a.stats.mergedPRs) {
-          return b.stats.mergedPRs - a.stats.mergedPRs;
-        }
-        return b.stats.totalPRs - a.stats.totalPRs;
-      });
+        }))
+        .sort((a, b) => {
+          // If both have manual ranks, sort by manual rank
+          if (a.stats.manualRank && b.stats.manualRank) {
+            return a.stats.manualRank - b.stats.manualRank;
+          }
+          
+          // If only one has manual rank, prioritize that one
+          if (a.stats.manualRank) return -1;
+          if (b.stats.manualRank) return 1;
+          
+          // Otherwise sort by points
+          if ((b.stats.points || 0) !== (a.stats.points || 0)) {
+            return (b.stats.points || 0) - (a.stats.points || 0);
+          }
+          if (b.stats.mergedPRs !== a.stats.mergedPRs) {
+            return b.stats.mergedPRs - a.stats.mergedPRs;
+          }
+          return b.stats.totalPRs - a.stats.totalPRs;
+        });
 
-      // Add ranks and use avatars.githubusercontent.com for images
-      const rankedUsers = sortedUsers.map((user, index: number) => ({
+      // Add ranks based on the sorted order
+      const rankedUsers = sortedUsers.map((user, index) => ({
         login: user.login,
         avatar_url: `https://avatars.githubusercontent.com/${user.login}`,
         html_url: `https://github.com/${user.login}`,
-        rank: index + 1,
+        rank: user.stats.manualRank || (index + 1),
         hasLoggedIn: true,
         contributions: user.stats.contributions,
         points: user.stats.points || 0,
@@ -165,6 +181,16 @@ export default function Leaderboard() {
       return () => clearInterval(interval);
     }
   }, [status, session, refreshUserStats, fetchAllLoggedInUsers]);
+
+  useEffect(() => {
+    fetchLeaderboardSettings();
+  }, [fetchLeaderboardSettings]);
+  
+  useEffect(() => {
+    if (leaderboardSettings.visible) {
+      fetchAllLoggedInUsers();
+    }
+  }, [fetchAllLoggedInUsers, leaderboardSettings.visible]);
 
   const getPositionStyle = (rank: number) => {
     switch(rank) {
@@ -355,108 +381,119 @@ export default function Leaderboard() {
           </div>
         )}
 
-        <div className="max-w-4xl mx-auto">
-          <div className="p-6 rounded-lg border border-[#30363d] bg-[#161b22]">
-            <div className="grid grid-cols-1 gap-4">
-              {loading ? (
-                <div className="flex items-center justify-center h-40">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#238636]" />
-                </div>
-              ) : contributors.length > 0 ? (
-                contributors.map((contributor) => (
-                  <a
-                    key={contributor.login}
-                    href={contributor.html_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group relative"
-                  >
-                    <div className={`
-                      absolute -inset-0.5 bg-gradient-to-r 
-                      ${getPositionStyle(contributor.rank!)}
-                      rounded-lg opacity-75 group-hover:opacity-100 transition duration-200
-                      ${contributor.rank === 1 ? 'animate-pulse' : ''}
-                    `} />
-                    <div className="relative p-4 bg-[#161b22] rounded-lg">
-                      <div className="flex items-center gap-4">
-                        <div className="text-2xl font-bold text-[#8b949e] w-8">
-                          #{contributor.rank}
-                        </div>
-                        <Image 
-                          src={contributor.avatar_url}
-                          alt={contributor.login}
-                          width={40}
-                          height={40}
-                          className="rounded-full"
-                        />
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-white font-medium">
-                              {contributor.login}
-                            </span>
-                            {contributor.rank === 1 && (
-                              <Trophy className="w-4 h-4 text-yellow-400" />
+        {leaderboardSettings.visible ? (
+          <div className="max-w-4xl mx-auto">
+            <div className="p-6 rounded-lg border border-[#30363d] bg-[#161b22]">
+              <div className="grid grid-cols-1 gap-4">
+                {loading ? (
+                  <div className="flex items-center justify-center h-40">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#238636]" />
+                  </div>
+                ) : contributors.length > 0 ? (
+                  contributors.map((contributor) => (
+                    <a
+                      key={contributor.login}
+                      href={contributor.html_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group relative"
+                    >
+                      <div className={`
+                        absolute -inset-0.5 bg-gradient-to-r 
+                        ${getPositionStyle(contributor.rank!)}
+                        rounded-lg opacity-75 group-hover:opacity-100 transition duration-200
+                        ${contributor.rank === 1 ? 'animate-pulse' : ''}
+                      `} />
+                      <div className="relative p-4 bg-[#161b22] rounded-lg">
+                        <div className="flex items-center gap-4">
+                          <div className="text-2xl font-bold text-[#8b949e] w-8">
+                            #{contributor.rank}
+                          </div>
+                          <Image 
+                            src={contributor.avatar_url}
+                            alt={contributor.login}
+                            width={40}
+                            height={40}
+                            className="rounded-full"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-white font-medium">
+                                {contributor.login}
+                              </span>
+                              {contributor.rank === 1 && (
+                                <Trophy className="w-4 h-4 text-yellow-400" />
+                              )}
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-[#8b949e]">
+                              <div className="flex items-center gap-1">
+                                <GitPullRequest className="w-4 h-4" />
+                                <span>{contributor.pullRequests.merged}/{contributor.pullRequests.total} PRs</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Star className="w-4 h-4" />
+                                <span>{contributor.points} points</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Award className="w-4 h-4" />
+                                <span className={getLevelColor(contributor.level || 'Newcomer')}>
+                                  {contributor.level}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            {contributor.hasLoggedIn && (
+                              <div className="text-xs px-2 py-1 rounded-full bg-[#238636]/20 text-[#238636] border border-[#238636]/20 mb-2">
+                                Logged In
+                              </div>
+                            )}
+                            {(contributor.rank !== undefined && contributor.rank <= 15) && (
+                              <div className="text-xs px-2 py-1 rounded-full bg-[#238636]/20 text-[#238636] border border-[#238636]/20">
+                                Qualifying
+                              </div>
                             )}
                           </div>
-                          <div className="flex items-center gap-4 text-sm text-[#8b949e]">
-                            <div className="flex items-center gap-1">
-                              <GitPullRequest className="w-4 h-4" />
-                              <span>{contributor.pullRequests.merged}/{contributor.pullRequests.total} PRs</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Star className="w-4 h-4" />
-                              <span>{contributor.points} points</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Award className="w-4 h-4" />
-                              <span className={getLevelColor(contributor.level || 'Newcomer')}>
-                                {contributor.level}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          {contributor.hasLoggedIn && (
-                            <div className="text-xs px-2 py-1 rounded-full bg-[#238636]/20 text-[#238636] border border-[#238636]/20 mb-2">
-                              Logged In
-                            </div>
-                          )}
-                          {(contributor.rank !== undefined && contributor.rank <= 15) && (
-                            <div className="text-xs px-2 py-1 rounded-full bg-[#238636]/20 text-[#238636] border border-[#238636]/20">
-                              Qualifying
-                            </div>
-                          )}
                         </div>
                       </div>
-                    </div>
-                  </a>
-                ))
-              ) : (
-                <div className="text-center py-12 text-[#8b949e]">
-                  <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg">No contributors yet</p>
-                  <p className="text-sm">Be the first to contribute!</p>
-                </div>
-              )}
+                    </a>
+                  ))
+                ) : (
+                  <div className="text-center py-12 text-[#8b949e]">
+                    <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg">No contributors yet</p>
+                    <p className="text-sm">Be the first to contribute!</p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
-          <div className="mt-8 p-6 rounded-lg bg-gradient-to-r from-[#238636]/10 to-transparent border border-[#238636]/20">
-            <div className="flex items-start gap-4">
-              <div className="p-3 rounded-lg bg-[#238636]/10">
-                <Star className="w-6 h-6 text-[#238636]" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-[#238636] mb-2">Selection Criteria</h3>
-                <div className="space-y-2 text-[#8b949e]">
-                  <p>• Top 15 contributors will be selected</p>
-                  <p>• Minimum 3 quality pull requests required</p>
-                  <p>• Code quality and complexity considered</p>
+            <div className="mt-8 p-6 rounded-lg bg-gradient-to-r from-[#238636]/10 to-transparent border border-[#238636]/20">
+              <div className="flex items-start gap-4">
+                <div className="p-3 rounded-lg bg-[#238636]/10">
+                  <Star className="w-6 h-6 text-[#238636]" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-[#238636] mb-2">Selection Criteria</h3>
+                  <div className="space-y-2 text-[#8b949e]">
+                    <p>• Top 15 contributors will be selected</p>
+                    <p>• Minimum 3 quality pull requests required</p>
+                    <p>• Code quality and complexity considered</p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="max-w-4xl mx-auto p-6 rounded-lg border border-[#30363d] bg-[#161b22] text-center">
+            <Lock className="w-16 h-16 text-[#8b949e] mx-auto mb-6" />
+            <h2 className="text-2xl font-bold mb-4">Leaderboard is currently hidden</h2>
+            <p className="text-[#8b949e] max-w-md mx-auto">
+              The leaderboard is temporarily hidden by the administrators. 
+              Please check back later.
+            </p>
+          </div>
+        )}
       </main>
     </div>
   );

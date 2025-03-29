@@ -1,8 +1,10 @@
 import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 import { authOptions } from "../auth/auth-options";
-import { addUserToDatabase, getActiveUsers, storePullRequests } from "@/lib/firebase";
+import { addUserToDatabase, storePullRequests } from "@/lib/firebase";
 import { calculatePoints, getContributionLevel } from "@/lib/points-calculator";
+import { ref, get } from "firebase/database";
+import { db } from "@/lib/firebase-config";
 
 // Add types for GitHub API responses
 type GitHubRepo = {
@@ -34,13 +36,61 @@ type WeeklyStats = {
   commits: number;
 };
 
+// Define the UserData interface
+interface UserData {
+  stats: {
+    points?: number;
+    level?: string;
+    totalPRs?: number;
+    mergedPRs?: number;
+    contributions?: number;
+    orgPRs?: number;
+    orgMergedPRs?: number;
+  };
+  lastActive: string;
+}
+
 export async function GET() {
   try {
-    const activeUsers = await getActiveUsers();
+    console.log("API: Fetching all logged-in users");
+    const usersRef = ref(db, 'users');
+    const snapshot = await get(usersRef);
     
-    return NextResponse.json(activeUsers);
+    if (!snapshot.exists()) {
+      console.log("API: No users found");
+      return NextResponse.json([]);
+    }
+    
+    // Get all users
+    const users = snapshot.val();
+    
+    // Fetch manual ranks from the test path
+    const manualRanksRef = ref(db, 'test/manualRanks');
+    const manualRanksSnapshot = await get(manualRanksRef);
+    const manualRanks = manualRanksSnapshot.exists() ? manualRanksSnapshot.val() : {};
+    
+    // Convert to array and add manual ranks - fix the type casting
+    const usersArray = Object.entries(users).map(([login, userData]) => {
+      // Type assertion here
+      const typedUserData = userData as UserData;
+      
+      // Check if this user has a manual rank
+      const userManualRank = manualRanks[login]?.manualRank || undefined;
+      
+      return {
+        login,
+        stats: {
+          ...typedUserData.stats,
+          manualRank: userManualRank
+        },
+        lastActive: typedUserData.lastActive
+      };
+    });
+    
+    console.log(`API: Found ${usersArray.length} users`);
+    return NextResponse.json(usersArray);
   } catch (error) {
-    console.error('Error fetching users:', error);
+    console.error("API: Error fetching users:", error);
     return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
   }
 }
