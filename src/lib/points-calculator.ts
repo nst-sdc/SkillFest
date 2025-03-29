@@ -4,35 +4,70 @@
 
 // Point values for different activities
 export const POINT_VALUES = {
-  // General GitHub activity
-  GENERAL_PR_CREATED: 1,
-  GENERAL_PR_MERGED: 3,
+  // General GitHub activity (open source, not NST-SDC)
+  GENERAL_PR_CREATED: 5,
+  GENERAL_PR_MERGED: 7,
   
-  // NST-SDC specific activity (higher weights)
-  ORG_PR_CREATED: 5,
+  // NST-SDC specific activity
+  ORG_PR_CREATED: 10,
   ORG_PR_MERGED: 15,
-  ORG_COMMIT: 2,
 };
 
 export type ContributionData = {
   totalPRs: number;
   mergedPRs: number;
-  contributions: number;
+  contributions: number; // Keeping for backward compatibility
   orgPRs: number;
   orgMergedPRs: number;
 };
 
-export function calculatePoints(data: ContributionData): number {
-  let totalPoints = 0;
+export function calculatePoints(data: {
+  totalPRs: number;
+  mergedPRs: number;
+  contributions: number; // Keeping for backward compatibility
+  orgPRs: number;
+  orgMergedPRs: number;
+}): number {
+  // Ensure all values are numbers and not undefined/null
+  const totalPRs = Number(data.totalPRs) || 0;
+  const mergedPRs = Number(data.mergedPRs) || 0;
+  const orgPRs = Number(data.orgPRs) || 0;
+  const orgMergedPRs = Number(data.orgMergedPRs) || 0;
   
-  // Points for organization PRs (weighted higher)
-  totalPoints += data.orgPRs * POINT_VALUES.ORG_PR_CREATED;
-  totalPoints += data.orgMergedPRs * POINT_VALUES.ORG_PR_MERGED;
+  // Calculate points for organization PRs
+  const orgPRPoints = orgPRs * POINT_VALUES.ORG_PR_CREATED;
+  const orgMergedPRPoints = orgMergedPRs * POINT_VALUES.ORG_PR_MERGED;
   
-  // Points for general contributions
-  totalPoints += data.contributions * POINT_VALUES.ORG_COMMIT;
+  // Calculate points for general PRs (non-organization)
+  // We need to calculate the number of general PRs by subtracting org PRs from total PRs
+  const generalPRs = Math.max(0, totalPRs - orgPRs);
   
-  return Math.round(totalPoints);
+  // Calculate general merged PRs correctly
+  const generalMergedPRs = Math.max(0, mergedPRs - orgMergedPRs);
+  
+  // Calculate points for each category
+  const generalPRPoints = generalPRs * POINT_VALUES.GENERAL_PR_CREATED;
+  const generalMergedPRPoints = generalMergedPRs * POINT_VALUES.GENERAL_PR_MERGED;
+  
+  // Sum up all points
+  const totalPoints = orgPRPoints + orgMergedPRPoints + generalPRPoints + generalMergedPRPoints;
+  
+  // Add detailed logging to help diagnose issues
+  console.log(`Points calculation for user with ${totalPRs} total PRs:`, {
+    totalPRs,
+    orgPRs,
+    generalPRs: totalPRs - orgPRs,
+    mergedPRs,
+    orgMergedPRs,
+    generalMergedPRs: mergedPRs - orgMergedPRs,
+    orgPRPoints,
+    orgMergedPRPoints,
+    generalPRPoints,
+    generalMergedPRPoints,
+    totalPoints
+  });
+  
+  return totalPoints;
 }
 
 export function getContributionLevel(points: number): string {

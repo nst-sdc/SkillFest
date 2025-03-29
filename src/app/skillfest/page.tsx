@@ -402,10 +402,10 @@ export default function SkillFest() {
               <div>
                 <h3 className="text-lg font-semibold text-white mb-2">Points System</h3>
                 <ul className="list-disc pl-5 space-y-2">
-                  <li>Merged PR to organization repositories: <span className="text-[#238636]">10 points</span></li>
-                  <li>Merged PR to other repositories: <span className="text-[#238636]">5 points</span></li>
-                  <li>Open PR to organization repositories: <span className="text-[#238636]">3 points</span></li>
-                  <li>Open PR to other repositories: <span className="text-[#238636]">1 point</span></li>
+                  <li>Organization PR Created: <span className="text-[#238636]">10 points</span></li>
+                  <li>Organization PR Merged: <span className="text-[#238636]">15 points</span></li>
+                  <li>Open Source PR Created (non-org): <span className="text-[#238636]">5 points</span></li>
+                  <li>Open Source PR Merged (non-org): <span className="text-[#238636]">7 points</span></li>
                 </ul>
               </div>
               

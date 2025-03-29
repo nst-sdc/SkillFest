@@ -51,8 +51,44 @@ export default function Leaderboard() {
       
       const users = (await response.json()) as UserResponse[];
       
-      // Sort users by points first, then by merged PRs if points are equal
-      const sortedUsers = users.sort((a, b) => {
+      // Recalculate points for each user to ensure consistency
+      const usersWithCorrectPoints = users.map(user => {
+        // Get the raw stats
+        const totalPRs = user.stats.totalPRs || 0;
+        const mergedPRs = user.stats.mergedPRs || 0;
+        const orgPRs = user.stats.orgPRs || 0;
+        const orgMergedPRs = user.stats.orgMergedPRs || 0;
+        
+        // Calculate points using the same formula as in points-calculator.ts
+        const orgPRPoints = orgPRs * 10; // ORG_PR_CREATED
+        const orgMergedPRPoints = orgMergedPRs * 15; // ORG_PR_MERGED
+        const generalPRs = Math.max(0, totalPRs - orgPRs);
+        const generalMergedPRs = Math.max(0, mergedPRs - orgMergedPRs);
+        const generalPRPoints = generalPRs * 5; // GENERAL_PR_CREATED
+        const generalMergedPRPoints = generalMergedPRs * 7; // GENERAL_PR_MERGED
+        
+        // Calculate total points
+        const calculatedPoints = orgPRPoints + orgMergedPRPoints + generalPRPoints + generalMergedPRPoints;
+        
+        // Determine level based on calculated points
+        let level = 'Newcomer';
+        if (calculatedPoints >= 200) level = 'Expert';
+        else if (calculatedPoints >= 100) level = 'Advanced';
+        else if (calculatedPoints >= 50) level = 'Intermediate';
+        else if (calculatedPoints >= 20) level = 'Beginner';
+        
+        return {
+          ...user,
+          stats: {
+            ...user.stats,
+            points: calculatedPoints,
+            level: level
+          }
+        };
+      });
+      
+      // Sort users by recalculated points
+      const sortedUsers = usersWithCorrectPoints.sort((a, b) => {
         if ((b.stats.points || 0) !== (a.stats.points || 0)) {
           return (b.stats.points || 0) - (a.stats.points || 0);
         }
@@ -256,10 +292,10 @@ export default function Leaderboard() {
                     {currentUser.pullRequests.orgTotal || 0}
                   </span>
                   <span className="text-[#8b949e]">×</span>
-                  <span className="text-[#f778ba] mx-2">5</span>
+                  <span className="text-[#f778ba] mx-2">10</span>
                   <span className="text-[#8b949e]">=</span>
                   <span className="text-[#238636] font-bold ml-2">
-                    {(currentUser.pullRequests.orgTotal || 0) * 5}
+                    {(currentUser.pullRequests.orgTotal || 0) * 10}
                   </span>
                 </div>
               </div>
@@ -280,16 +316,31 @@ export default function Leaderboard() {
               </div>
               
               <div className="flex justify-between items-center py-2 border-b border-[#30363d]">
-                <div className="text-[#8b949e]">Contributions (Commits)</div>
+                <div className="text-[#8b949e]">Open Source PRs Created (non-org)</div>
                 <div className="flex items-center">
                   <span className="text-white font-medium mr-2">
-                    {currentUser.contributions || 0}
+                    {Math.max(0, (currentUser.pullRequests.total || 0) - (currentUser.pullRequests.orgTotal || 0))}
                   </span>
                   <span className="text-[#8b949e]">×</span>
-                  <span className="text-[#f778ba] mx-2">2</span>
+                  <span className="text-[#f778ba] mx-2">5</span>
                   <span className="text-[#8b949e]">=</span>
                   <span className="text-[#238636] font-bold ml-2">
-                    {(currentUser.contributions || 0) * 2}
+                    {Math.max(0, (currentUser.pullRequests.total || 0) - (currentUser.pullRequests.orgTotal || 0)) * 5}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center py-2 border-b border-[#30363d]">
+                <div className="text-[#8b949e]">Open Source PRs Merged (non-org)</div>
+                <div className="flex items-center">
+                  <span className="text-white font-medium mr-2">
+                    {Math.max(0, (currentUser.pullRequests.merged || 0) - (currentUser.pullRequests.orgMerged || 0))}
+                  </span>
+                  <span className="text-[#8b949e]">×</span>
+                  <span className="text-[#f778ba] mx-2">7</span>
+                  <span className="text-[#8b949e]">=</span>
+                  <span className="text-[#238636] font-bold ml-2">
+                    {Math.max(0, (currentUser.pullRequests.merged || 0) - (currentUser.pullRequests.orgMerged || 0)) * 7}
                   </span>
                 </div>
               </div>

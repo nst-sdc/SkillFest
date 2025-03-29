@@ -54,6 +54,9 @@ export async function POST() {
   }
 
   try {
+    // Declare pullRequestDetails at the beginning of the function
+    let pullRequestDetails = [];
+    
     const githubResponse = await fetch('https://api.github.com/user', {
       headers: {
         'Authorization': `Bearer ${session.accessToken}`,
@@ -119,11 +122,29 @@ export async function POST() {
       }
     );
 
-    let orgMergedPRs = 0;
+    const orgMergedPRs = 0;
     if (orgMergedPRsResponse.ok) {
-      const mergedResult = await orgMergedPRsResponse.json();
-      orgMergedPRs = mergedResult.total_count;
-      console.log(`Found ${orgMergedPRs} merged PRs in the organization`);
+      try {
+        // Clone the response before reading it to avoid "Body already read" errors
+        const clonedResponse = orgMergedPRsResponse.clone();
+        const mergedPRsData = await clonedResponse.json();
+        console.log(`Found ${mergedPRsData.items.length} merged PRs for ${githubUser.login}`);
+        
+        for (const item of mergedPRsData.items) {
+          const isOrg = item.repository_url.includes('nst-sdc');
+          pullRequestDetails.push({
+            id: item.id,
+            title: item.title,
+            url: item.html_url,
+            state: 'merged',
+            created_at: item.created_at,
+            merged_at: item.closed_at, // GitHub search API doesn't provide merged_at directly
+            isOrg
+          });
+        }
+      } catch (error) {
+        console.error('Error processing merged PRs:', error);
+      }
     }
 
     // Get all merged PRs by the user
@@ -207,7 +228,17 @@ export async function POST() {
       }
     }
 
-    // Calculate points
+    // Add this debug logging before calculating points
+    console.log("User contribution data for points calculation:", {
+      login: githubUser.login,
+      totalPRs,
+      mergedPRs,
+      contributions: totalContributions,
+      orgPRs,
+      orgMergedPRs
+    });
+
+    // Calculate points for all users using the same logic
     const contributionData = {
       totalPRs,
       mergedPRs,
@@ -219,6 +250,9 @@ export async function POST() {
     const points = calculatePoints(contributionData);
     const level = getContributionLevel(points);
     
+    // Log the calculation for debugging
+    console.log(`Points calculated for ${githubUser.login}:`, points);
+
     // Store in Firebase
     const userStats = {
       login: githubUser.login,
@@ -245,24 +279,30 @@ export async function POST() {
     
     // After you've fetched the PRs from GitHub API
     // Store detailed PR information
-    const pullRequestDetails = [];
+    pullRequestDetails = []; // Reset the array instead of redeclaring it
 
     // For merged PRs
     if (orgMergedPRsResponse.ok) {
-      const mergedPRsData = await orgMergedPRsResponse.json();
-      console.log(`Found ${mergedPRsData.items.length} merged PRs for ${githubUser.login}`);
-      
-      for (const item of mergedPRsData.items) {
-        const isOrg = item.repository_url.includes('nst-sdc');
-        pullRequestDetails.push({
-          id: item.id,
-          title: item.title,
-          url: item.html_url,
-          state: 'merged',
-          created_at: item.created_at,
-          merged_at: item.closed_at, // GitHub search API doesn't provide merged_at directly
-          isOrg
-        });
+      try {
+        // Clone the response before reading it to avoid "Body already read" errors
+        const clonedResponse = orgMergedPRsResponse.clone();
+        const mergedPRsData = await clonedResponse.json();
+        console.log(`Found ${mergedPRsData.items.length} merged PRs for ${githubUser.login}`);
+        
+        for (const item of mergedPRsData.items) {
+          const isOrg = item.repository_url.includes('nst-sdc');
+          pullRequestDetails.push({
+            id: item.id,
+            title: item.title,
+            url: item.html_url,
+            state: 'merged',
+            created_at: item.created_at,
+            merged_at: item.closed_at, // GitHub search API doesn't provide merged_at directly
+            isOrg
+          });
+        }
+      } catch (error) {
+        console.error('Error processing merged PRs:', error);
       }
     }
 
