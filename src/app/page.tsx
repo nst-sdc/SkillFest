@@ -247,7 +247,7 @@ export default function Home() {
               <div className="flex items-center gap-8">
                 <div className="w-1/2 text-right">
                   <div className="bg-[#161b22] p-6 rounded-lg border border-[#30363d] hover:border-[#238636] transition-all duration-300 group">
-                    <div className="text-sm font-mono text-[#238636] mb-2">March 25</div>
+                    <div className="text-sm font-mono text-[#238636] mb-2">March 30</div>
                     <h3 className="text-lg font-bold text-white mb-2">Registration Opens</h3>
                     <p className="text-[#8b949e] group-hover:text-white transition-colors duration-300">
                       Sign up and choose your track - Developer or Creative Lead
@@ -281,7 +281,7 @@ export default function Home() {
               <div className="flex items-center gap-8">
                 <div className="w-1/2 text-right">
                   <div className="bg-[#161b22] p-6 rounded-lg border border-[#30363d] hover:border-[#238636] transition-all duration-300 group">
-                    <div className="text-sm font-mono text-[#238636] mb-2">March 25</div>
+                    <div className="text-sm font-mono text-[#238636] mb-2">April 5</div>
                     <h3 className="text-lg font-bold text-white mb-2">Final Evaluation</h3>
                     <p className="text-[#8b949e] group-hover:text-white transition-colors duration-300">
                       Top contributors will be selected for the team
