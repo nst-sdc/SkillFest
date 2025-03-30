@@ -1,5 +1,6 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getDatabase, ref, set, get, child, update, Database } from "firebase/database";
+import { db } from "@/lib/firebase-config";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -317,5 +318,48 @@ export const testFirebaseConnection = async () => {
       }
     }
     return false;
+  }
+};
+
+// Define user profile type
+export type UserProfile = {
+  login: string;
+  avatar_url: string;
+  stats?: {
+    totalPRs: number;
+    mergedPRs: number;
+    contributions: number;
+    orgPRs: number;
+    orgMergedPRs: number;
+    points: number;
+    level: string;
+    rank?: number;
+  };
+  pullRequests?: Array<{
+    id: number;
+    title: string;
+    url: string;
+    state: string;
+    created_at: string;
+    isOrg: boolean;
+  }>;
+};
+
+/**
+ * Retrieves a user profile by username
+ */
+export const getUserProfile = async (username: string): Promise<UserProfile | null> => {
+  try {
+    const userRef = ref(db, `test/users/${username}`);
+    const snapshot = await get(userRef);
+    
+    if (snapshot.exists()) {
+      return snapshot.val() as UserProfile;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error(`Error fetching user profile for ${username}:`, error);
+    throw error;
   }
 }; 

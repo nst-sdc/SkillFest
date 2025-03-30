@@ -5,6 +5,8 @@ import { ArrowLeft, Trophy, GitPullRequest, Star, Award, Lock } from "lucide-rea
 import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
 import Image from 'next/image';
+import { ref, get } from "firebase/database";
+import { db } from "@/lib/firebase-config";
 
 type Contributor = {
   login: string;
@@ -53,6 +55,7 @@ export default function Leaderboard() {
     visible: true,
     lastUpdated: ''
   });
+  const [leaderboardVisible, setLeaderboardVisible] = useState(true);
 
   // Fetch leaderboard settings
   const fetchLeaderboardSettings = useCallback(async () => {
@@ -192,6 +195,23 @@ export default function Leaderboard() {
     }
   }, [fetchAllLoggedInUsers, leaderboardSettings.visible]);
 
+  // Fetch leaderboard visibility setting
+  useEffect(() => {
+    const fetchLeaderboardVisibility = async () => {
+      try {
+        const visibilityRef = ref(db, 'test/leaderboardVisible');
+        const snapshot = await get(visibilityRef);
+        if (snapshot.exists()) {
+          setLeaderboardVisible(snapshot.val() === true);
+        }
+      } catch (err) {
+        console.error('Error fetching leaderboard visibility:', err);
+      }
+    };
+
+    fetchLeaderboardVisibility();
+  }, []);
+
   const getPositionStyle = (rank: number) => {
     switch(rank) {
       case 1: return 'from-yellow-400 to-yellow-600';
@@ -251,18 +271,12 @@ export default function Leaderboard() {
 
   return (
     <div className="min-h-screen bg-[#0d1117]">
-      <div className="absolute inset-0 bg-grid-pattern opacity-[0.15]" />
-      
-      <header className="py-4 px-6 border-b border-[#30363d] bg-[#0d1117]/80 backdrop-blur-sm">
-        <div className="container mx-auto">
-          <Link href="/skillfest" className="inline-flex items-center text-[#8b949e] hover:text-white transition-colors">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to SkillFest
-          </Link>
-        </div>
-      </header>
-      
-      <main className="container mx-auto px-4 py-8 relative z-10">
+      <main className="container mx-auto px-4 py-8">
+        <Link href="/" className="inline-flex items-center gap-2 text-[#8b949e] hover:text-white mb-8">
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to SkillFest</span>
+        </Link>
+        
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-white">SkillFest Leaderboard</h1>
           <p className="text-[#8b949e] mt-2">Top contributors will be selected to join the club</p>
@@ -290,7 +304,8 @@ export default function Leaderboard() {
           </button>
         </div>
 
-        {currentUser && (
+        {/* Current user's points breakdown - only show if leaderboard is visible */}
+        {currentUser && leaderboardVisible && (
           <div className="max-w-4xl mx-auto mb-8 bg-[#0d1117] rounded-lg p-6 border border-[#30363d]">
             <div className="flex items-center gap-4 mb-4">
               <Image 
@@ -311,77 +326,59 @@ export default function Leaderboard() {
             <h3 className="text-lg font-medium mb-4 text-white">Your Points Breakdown</h3>
             
             <div className="space-y-3">
-              <div className="flex justify-between items-center py-2 border-b border-[#30363d]">
-                <div className="text-[#8b949e]">Organization PRs Created</div>
-                <div className="flex items-center">
-                  <span className="text-white font-medium mr-2">
-                    {currentUser.pullRequests.orgTotal || 0}
-                  </span>
-                  <span className="text-[#8b949e]">×</span>
-                  <span className="text-[#f778ba] mx-2">10</span>
-                  <span className="text-[#8b949e]">=</span>
-                  <span className="text-[#238636] font-bold ml-2">
-                    {(currentUser.pullRequests.orgTotal || 0) * 10}
-                  </span>
+              <div className="flex justify-between items-center pb-2 border-b border-[#30363d]">
+                <div className="flex items-center gap-2">
+                  <GitPullRequest className="w-4 h-4 text-[#A371F7]" />
+                  <span className="text-[#8b949e]">Organization PRs Created</span>
+                </div>
+                <div className="text-white">
+                  <span className="text-[#8b949e]">{currentUser.pullRequests.orgTotal || 0} × 10 = </span>
+                  <span className="font-medium text-[#238636]">{(currentUser.pullRequests.orgTotal || 0) * 10}</span>
                 </div>
               </div>
               
-              <div className="flex justify-between items-center py-2 border-b border-[#30363d]">
-                <div className="text-[#8b949e]">Organization PRs Merged</div>
-                <div className="flex items-center">
-                  <span className="text-white font-medium mr-2">
-                    {currentUser.pullRequests.orgMerged || 0}
-                  </span>
-                  <span className="text-[#8b949e]">×</span>
-                  <span className="text-[#f778ba] mx-2">15</span>
-                  <span className="text-[#8b949e]">=</span>
-                  <span className="text-[#238636] font-bold ml-2">
-                    {(currentUser.pullRequests.orgMerged || 0) * 15}
-                  </span>
+              <div className="flex justify-between items-center pb-2 border-b border-[#30363d]">
+                <div className="flex items-center gap-2">
+                  <GitPullRequest className="w-4 h-4 text-[#A371F7]" />
+                  <span className="text-[#8b949e]">Organization PRs Merged</span>
+                </div>
+                <div className="text-white">
+                  <span className="text-[#8b949e]">{currentUser.pullRequests.orgMerged || 0} × 15 = </span>
+                  <span className="font-medium text-[#238636]">{(currentUser.pullRequests.orgMerged || 0) * 15}</span>
                 </div>
               </div>
               
-              <div className="flex justify-between items-center py-2 border-b border-[#30363d]">
-                <div className="text-[#8b949e]">Open Source PRs Created (non-org)</div>
-                <div className="flex items-center">
-                  <span className="text-white font-medium mr-2">
-                    {Math.max(0, (currentUser.pullRequests.total || 0) - (currentUser.pullRequests.orgTotal || 0))}
-                  </span>
-                  <span className="text-[#8b949e]">×</span>
-                  <span className="text-[#f778ba] mx-2">5</span>
-                  <span className="text-[#8b949e]">=</span>
-                  <span className="text-[#238636] font-bold ml-2">
-                    {Math.max(0, (currentUser.pullRequests.total || 0) - (currentUser.pullRequests.orgTotal || 0)) * 5}
-                  </span>
+              <div className="flex justify-between items-center pb-2 border-b border-[#30363d]">
+                <div className="flex items-center gap-2">
+                  <GitPullRequest className="w-4 h-4 text-[#8b949e]" />
+                  <span className="text-[#8b949e]">Open Source PRs Created</span>
+                </div>
+                <div className="text-white">
+                  <span className="text-[#8b949e]">{Math.max(0, (currentUser.pullRequests.total || 0) - (currentUser.pullRequests.orgTotal || 0))} × 5 = </span>
+                  <span className="font-medium text-[#238636]">{(Math.max(0, (currentUser.pullRequests.total || 0) - (currentUser.pullRequests.orgTotal || 0)) * 5)}</span>
                 </div>
               </div>
               
-              <div className="flex justify-between items-center py-2 border-b border-[#30363d]">
-                <div className="text-[#8b949e]">Open Source PRs Merged (non-org)</div>
-                <div className="flex items-center">
-                  <span className="text-white font-medium mr-2">
-                    {Math.max(0, (currentUser.pullRequests.merged || 0) - (currentUser.pullRequests.orgMerged || 0))}
-                  </span>
-                  <span className="text-[#8b949e]">×</span>
-                  <span className="text-[#f778ba] mx-2">7</span>
-                  <span className="text-[#8b949e]">=</span>
-                  <span className="text-[#238636] font-bold ml-2">
-                    {Math.max(0, (currentUser.pullRequests.merged || 0) - (currentUser.pullRequests.orgMerged || 0)) * 7}
-                  </span>
+              <div className="flex justify-between items-center pb-2 border-b border-[#30363d]">
+                <div className="flex items-center gap-2">
+                  <GitPullRequest className="w-4 h-4 text-[#8b949e]" />
+                  <span className="text-[#8b949e]">Open Source PRs Merged</span>
+                </div>
+                <div className="text-white">
+                  <span className="text-[#8b949e]">{Math.max(0, (currentUser.pullRequests.merged || 0) - (currentUser.pullRequests.orgMerged || 0))} × 7 = </span>
+                  <span className="font-medium text-[#238636]">{(Math.max(0, (currentUser.pullRequests.merged || 0) - (currentUser.pullRequests.orgMerged || 0)) * 7)}</span>
                 </div>
               </div>
               
-              <div className="flex justify-between items-center py-2 mt-2">
-                <div className="text-white font-medium">Total Points</div>
-                <div className="text-xl font-bold text-[#238636]">
-                  {currentUser.points}
-                </div>
+              <div className="flex justify-between items-center pt-2">
+                <div className="font-bold text-white">Total Points</div>
+                <div className="font-bold text-[#238636] text-xl">{currentUser.points}</div>
               </div>
             </div>
           </div>
         )}
 
-        {leaderboardSettings.visible ? (
+        {leaderboardVisible ? (
           <div className="max-w-4xl mx-auto">
             <div className="p-6 rounded-lg border border-[#30363d] bg-[#161b22]">
               <div className="grid grid-cols-1 gap-4">
