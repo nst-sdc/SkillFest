@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { getUserProfile } from "@/lib/firebase";
 import type { UserProfile } from "@/lib/firebase";
 import Link from "next/link";
 import { ArrowLeft, GitPullRequest, GitMerge, Trophy } from "lucide-react";
@@ -25,14 +24,20 @@ export default function UserProfile() {
         }
         
         // Fetch the user profile data
-        const userData = await getUserProfile(username);
-        setUser(userData);
+        const userRef = ref(db, `test/users/${username}`);
+        const snapshot = await get(userRef);
+        
+        if (snapshot.exists()) {
+          setUser(snapshot.val() as UserProfile);
+        } else {
+          setUser(null);
+        }
         
         // Also fetch the leaderboard visibility setting
         const visibilityRef = ref(db, 'test/leaderboardVisible');
-        const snapshot = await get(visibilityRef);
-        if (snapshot.exists()) {
-          setLeaderboardVisible(snapshot.val() === true);
+        const visibilitySnapshot = await get(visibilityRef);
+        if (visibilitySnapshot.exists()) {
+          setLeaderboardVisible(visibilitySnapshot.val() === true);
         }
       } catch (err) {
         console.error('Error fetching user profile:', err);
@@ -58,7 +63,7 @@ export default function UserProfile() {
         
         {loading ? (
           <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#238636]"></div>
+            <div className="w-12 h-12 border-4 border-[#30363d] border-t-[#238636] rounded-full animate-spin"></div>
           </div>
         ) : error ? (
           <div className="p-4 bg-red-900/30 border border-red-700 rounded-lg text-red-400">
