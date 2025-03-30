@@ -1680,6 +1680,22 @@ export default function AdminPortal() {
           Clear All Manual Ranks
         </button>
       </div>
+
+      {/* Add this to your admin navigation or dashboard */}
+      <Link 
+        href="/admin/applications" 
+        className="p-4 bg-[#161b22] border border-[#30363d] rounded-lg hover:border-[#238636] transition-all"
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-[#238636]/10">
+            <Users className="w-5 h-5 text-[#238636]" />
+          </div>
+          <div>
+            <h3 className="font-medium text-white">Fresher Applications</h3>
+            <p className="text-sm text-[#8b949e]">View and manage applications</p>
+          </div>
+        </div>
+      </Link>
     </div>
   );
 } 

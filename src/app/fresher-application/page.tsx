@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { SignInButton } from "@/components/sign-in-button";
+import { storeFresherApplication } from "@/lib/firebase-fresher";
 
 export default function FresherApplication() {
   const { data: session } = useSession();
@@ -22,6 +23,7 @@ export default function FresherApplication() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -31,10 +33,22 @@ export default function FresherApplication() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setSubmissionError(null);
     
-    // Simulate submission with a timeout
-    setTimeout(() => {
-      console.log('Form submitted:', formData);
+    try {
+      // Store the application data in Firebase
+      const applicationId = await storeFresherApplication({
+        name: formData.name,
+        email: formData.email,
+        experience: formData.experience,
+        interests: formData.interests,
+        whyJoin: formData.whyJoin,
+        github: formData.github,
+        portfolio: formData.portfolio,
+        availability: formData.availability
+      });
+      
+      console.log('Application submitted successfully with ID:', applicationId);
       setIsSubmitting(false);
       setIsSubmitted(true);
       
@@ -42,14 +56,11 @@ export default function FresherApplication() {
       setTimeout(() => {
         router.push('/');
       }, 3000);
-    }, 1500);
-    
-    // Here you would typically send the data to your backend
-    // const response = await fetch('/api/fresher-applications', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(formData)
-    // });
+    } catch (error) {
+      console.error('Error submitting application:', error);
+      setIsSubmitting(false);
+      setSubmissionError('Failed to submit your application. Please try again.');
+    }
   };
 
   if (!session) {
@@ -320,6 +331,12 @@ export default function FresherApplication() {
                 </div>
                 
                 <div className="pt-6">
+                  {submissionError && (
+                    <div className="p-4 mb-4 bg-red-900/30 border border-red-700 rounded-lg text-red-400">
+                      {submissionError}
+                    </div>
+                  )}
+                  
                   <button
                     type="submit"
                     disabled={isSubmitting}

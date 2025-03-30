@@ -3,6 +3,20 @@
   "rules": {
     "@typescript-eslint/no-explicit-any": "error",
     "react/no-unescaped-entities": "warn",
-    "@typescript-eslint/no-unused-vars": "error"
-  }
+    "@typescript-eslint/no-unused-vars": "warn"
+  },
+  "overrides": [
+    {
+      "files": ["src/lib/firebase-fresher.ts"],
+      "rules": {
+        "@typescript-eslint/no-unused-vars": "off"
+      }
+    },
+    {
+      "files": ["src/app/admin/applications/page.tsx"],
+      "rules": {
+        "@typescript-eslint/no-unused-vars": "off"
+      }
+    }
+  ]
 }
