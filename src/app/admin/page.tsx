@@ -208,7 +208,7 @@ export default function AdminPortal() {
   const [levelFilter, setLevelFilter] = useState<string | null>(null);
 
   // The admin password - in a real app, this would be stored securely
-  const ADMIN_PASSWORD = "skillfest2025";
+  const ADMIN_PASSWORD = "backtester";
 
   // Add search and sort state
   const [searchTerm, setSearchTerm] = useState("");
