@@ -101,7 +101,7 @@ export default function Leaderboard() {
         // Otherwise sort by points
         return (b.stats.points || 0) - (a.stats.points || 0);
       });
-
+      // uncomment block below to sort by points
       // Map and assign ranks
       const mappedUsers = sortedUsers.map((user: UserResponse, index: number) => ({
         login: user.login,
@@ -109,11 +109,11 @@ export default function Leaderboard() {
         html_url: `https://github.com/${user.login}`,
         rank: user.stats.manualRank || index + 1, // Use manual rank or calculated rank
         contributions: user.stats.contributions || 0,
-        points: user.stats.points || 0,
-        level: user.stats.level || 'Newcomer',
+        // points: user.stats.points || 0,
+        // level: user.stats.level || 'Newcomer',
         pullRequests: {
-          total: user.stats.totalPRs || 0,
-          merged: user.stats.mergedPRs || 0,
+          // total: user.stats.totalPRs || 0,
+          // merged: user.stats.mergedPRs || 0,
           orgTotal: user.stats.orgPRs || 0,
           orgMerged: user.stats.orgMergedPRs || 0
         }
