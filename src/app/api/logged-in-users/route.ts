@@ -7,6 +7,23 @@ import { ref, get } from "firebase/database";
 import { db } from "@/lib/firebase-config";
 import { ADMIN_USERS } from "@/lib/admin-users";
 
+// Add the missing DatabaseUser type
+type DatabaseUser = {
+  login: string;
+  lastActive: string;
+  stats?: {
+    totalPRs?: number;
+    mergedPRs?: number;
+    contributions?: number;
+    orgPRs?: number;
+    orgMergedPRs?: number;
+    points?: number;
+    level?: string;
+    manualRank?: number;
+    hidden?: boolean;
+  };
+};
+
 // Add types for GitHub API responses
 type GitHubRepo = {
   name: string;
@@ -47,6 +64,7 @@ interface UserData {
     contributions?: number;
     orgPRs?: number;
     orgMergedPRs?: number;
+    hidden?: boolean;
   };
   lastActive: string;
 }
@@ -63,35 +81,35 @@ export async function GET() {
     }
     
     // Get all users
-    const users = snapshot.val();
+    const users = snapshot.val() as Record<string, DatabaseUser>;
     
-    // Fetch manual ranks from the test path
+    // Fetch manual ranks and hidden status from the test path
     const manualRanksRef = ref(db, 'test/manualRanks');
     const manualRanksSnapshot = await get(manualRanksRef);
     const manualRanks = manualRanksSnapshot.exists() ? manualRanksSnapshot.val() : {};
     
-    // Convert to array and add manual ranks - fix the type casting
+    // Convert to array and add manual ranks and hidden status
     const usersArray = Object.entries(users).map(([login, userData]) => {
-      // Type assertion here
       const typedUserData = userData as UserData;
-      
-      // Check if this user has a manual rank
-      const userManualRank = manualRanks[login]?.manualRank || undefined;
+      const userManualData = manualRanks[login] || {};
       
       return {
         login,
         stats: {
           ...typedUserData.stats,
-          manualRank: userManualRank
+          manualRank: userManualData.manualRank,
+          hidden: userManualData.hidden || false // Get hidden status from manualRanks
         },
         lastActive: typedUserData.lastActive
       };
     });
     
-    // Filter out admin users from the public leaderboard
-    const filteredUsers = usersArray.filter(user => !ADMIN_USERS.includes(user.login));
+    // Filter out admin users AND hidden users
+    const filteredUsers = usersArray.filter(user => 
+      !ADMIN_USERS.includes(user.login) && !user.stats.hidden
+    );
     
-    console.log(`API: Found ${filteredUsers.length} non-admin users out of ${usersArray.length} total users`);
+    console.log(`API: Found ${filteredUsers.length} visible non-admin users out of ${usersArray.length} total users`);
     return NextResponse.json(filteredUsers);
   } catch (error) {
     console.error("API: Error fetching users:", error);
@@ -318,7 +336,8 @@ export async function POST() {
         orgPRs,
         orgMergedPRs,
         points,
-        level
+        level,
+        hidden: false
       }
     };
     

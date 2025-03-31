@@ -35,6 +35,7 @@ type UserResponse = {
     points?: number;
     level?: string;
     manualRank?: number;
+    hidden?: boolean;
   };
 };
 
@@ -79,74 +80,52 @@ export default function Leaderboard() {
     }
   }, []);
 
-  const fetchAllLoggedInUsers = useCallback(async () => {
-    // Only fetch users if leaderboard is visible
-    if (!leaderboardVisible) {
-      setLoading(false);
-      return;
-    }
-    
-    setLoading(true);
+  const fetchUsers = useCallback(async () => {
     try {
       const response = await fetch('/api/logged-in-users');
-      if (!response.ok) throw new Error('Failed to fetch users');
+      const data = await response.json();
       
-      const users = (await response.json()) as UserResponse[];
+      // Filter out hidden users
+      const visibleUsers = data.filter((user: UserResponse) => !user.stats.hidden);
       
-      // Sort users by manual rank first, then by points
-      const sortedUsers = users
-        .map(user => ({
-          ...user,
-          stats: {
-            ...user.stats,
-            manualRank: user.stats.manualRank || null
-          }
-        }))
-        .sort((a, b) => {
-          // If both have manual ranks, sort by manual rank
-          if (a.stats.manualRank && b.stats.manualRank) {
-            return a.stats.manualRank - b.stats.manualRank;
-          }
-          
-          // If only one has manual rank, prioritize that one
-          if (a.stats.manualRank) return -1;
-          if (b.stats.manualRank) return 1;
-          
-          // Otherwise sort by points
-          if ((b.stats.points || 0) !== (a.stats.points || 0)) {
-            return (b.stats.points || 0) - (a.stats.points || 0);
-          }
-          if (b.stats.mergedPRs !== a.stats.mergedPRs) {
-            return b.stats.mergedPRs - a.stats.mergedPRs;
-          }
-          return b.stats.totalPRs - a.stats.totalPRs;
-        });
+      // Sort users by points and manual ranks
+      const sortedUsers = visibleUsers.sort((a: UserResponse, b: UserResponse) => {
+        // If both have manual ranks, sort by manual rank
+        if (a.stats.manualRank && b.stats.manualRank) {
+          return a.stats.manualRank - b.stats.manualRank;
+        }
+        // If only one has manual rank, prioritize that one
+        if (a.stats.manualRank) return -1;
+        if (b.stats.manualRank) return 1;
+        
+        // Otherwise sort by points
+        return (b.stats.points || 0) - (a.stats.points || 0);
+      });
 
-      // Add ranks based on the sorted order
-      const rankedUsers = sortedUsers.map((user) => ({
+      // Map and assign ranks
+      const mappedUsers = sortedUsers.map((user: UserResponse, index: number) => ({
         login: user.login,
         avatar_url: `https://avatars.githubusercontent.com/${user.login}`,
         html_url: `https://github.com/${user.login}`,
-        rank: user.stats.manualRank || (sortedUsers.indexOf(user) + 1),
-        hasLoggedIn: true,
-        contributions: user.stats.contributions,
+        rank: user.stats.manualRank || index + 1, // Use manual rank or calculated rank
+        contributions: user.stats.contributions || 0,
         points: user.stats.points || 0,
         level: user.stats.level || 'Newcomer',
         pullRequests: {
-          total: user.stats.totalPRs,
-          merged: user.stats.mergedPRs,
-          orgTotal: user.stats.orgPRs,
-          orgMerged: user.stats.orgMergedPRs
+          total: user.stats.totalPRs || 0,
+          merged: user.stats.mergedPRs || 0,
+          orgTotal: user.stats.orgPRs || 0,
+          orgMerged: user.stats.orgMergedPRs || 0
         }
       }));
-
-      setContributors(rankedUsers);
+      
+      setContributors(mappedUsers);
+      setLoading(false);
     } catch (error) {
-      console.error('Error fetching users', error);
-    } finally {
+      console.error("Error fetching users:", error);
       setLoading(false);
     }
-  }, [leaderboardVisible]);
+  }, []);
 
   // Refresh user stats
   const refreshUserStats = async () => {
@@ -169,7 +148,7 @@ export default function Leaderboard() {
       }
       
       // Refetch users after refreshing
-      fetchAllLoggedInUsers();
+      fetchUsers();
       
     } catch (error) {
       console.error('Error refreshing stats', error);
@@ -183,10 +162,13 @@ export default function Leaderboard() {
     fetchLeaderboardSettings().then(() => {
       // Only fetch users if leaderboard is visible
       if (leaderboardVisible) {
-        fetchAllLoggedInUsers();
+        setLoading(true); // Set loading before fetching
+        fetchUsers();
+      } else {
+        setLoading(false);
       }
     });
-  }, [fetchLeaderboardSettings, fetchAllLoggedInUsers, leaderboardVisible]);
+  }, [fetchLeaderboardSettings, fetchUsers, leaderboardVisible]);
 
   // Find the current user's rank
   const currentUser = session?.user?.name;

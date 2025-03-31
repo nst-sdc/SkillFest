@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from "react";
-import { ArrowLeft, Shield, Lock, Eye, EyeOff, GitPullRequest, GitMerge, ExternalLink, X, Calendar, ChevronLeft, ChevronRight, Check, AlertTriangle, Trophy, Save, RefreshCw, Search, ArrowUpDown, Users } from "lucide-react";
+import { ArrowLeft, Shield, Lock, Eye, EyeOff, GitPullRequest, GitMerge, ExternalLink, X, Calendar, ChevronLeft, ChevronRight, Check, AlertTriangle, Trophy, Save, RefreshCw, Search, Users } from "lucide-react";
 import Link from "next/link";
 import { getActiveUsers } from "@/lib/firebase";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
+import { ref, update, get } from "firebase/database";
+import { db } from "@/lib/firebase-config";
 
 // Define types for our admin portal
 type AdminUser = {
@@ -21,6 +23,7 @@ type AdminUser = {
     points: number;
     level: string;
     manualRank?: number | null;
+    hidden?: boolean;
   };
 };
 
@@ -212,8 +215,44 @@ export default function AdminPortal() {
 
   // Add search and sort state
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortField, setSortField] = useState<'points' | 'login' | 'rank'>('points');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  // Move fetchUsers outside useEffect and make it a function we can reuse
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      // Get users
+      const users = await getActiveUsers();
+      
+      // Get manual ranks and visibility settings
+      const manualRanksRef = ref(db, 'test/manualRanks');
+      const manualRanksSnapshot = await get(manualRanksRef);
+      const manualRanks = manualRanksSnapshot.exists() ? manualRanksSnapshot.val() : {};
+      
+      // Combine user data with manual ranks and visibility
+      const updatedUsers = users.map(user => ({
+        ...user,
+        stats: {
+          ...user.stats,
+          manualRank: manualRanks[user.login]?.manualRank || null,
+          hidden: manualRanks[user.login]?.hidden || false
+        }
+      }));
+      
+      setUsers(updatedUsers);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      setError('Failed to load users');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Use fetchUsers in useEffect
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchUsers();
+    }
+  }, [isAuthenticated]);
 
   const handleLogin = async () => {
     if (password === ADMIN_PASSWORD) {
@@ -309,7 +348,7 @@ export default function AdminPortal() {
     return prDateTime >= filterDate.getTime();
   };
 
-  // Improve the updateUserRank function to update UI in all places
+  // Update the updateUserRank function to use the fetchUsers function
   const updateUserRank = async (username: string, rank: number | null) => {
     try {
       const response = await fetch('/api/admin/update-user-rank', {
@@ -338,18 +377,16 @@ export default function AdminPortal() {
           });
         });
         
-        // Show a temporary success message
         setSettingsMessage({ 
           type: 'success', 
           text: `Rank for ${username} ${rank ? `set to ${rank}` : 'cleared'}` 
         });
         
-        // Clear the message after 2 seconds
         setTimeout(() => setSettingsMessage(null), 2000);
         
-        // Refresh the user list to ensure all UI components are updated
+        // Now we can safely call fetchUsers
         if (isAuthenticated) {
-          fetchUsers();
+          await fetchUsers();
         }
       } else {
         console.error("Failed to update user rank");
@@ -485,55 +522,7 @@ export default function AdminPortal() {
     }
   };
 
-  // Function to toggle sort direction
-  const toggleSort = (field: 'points' | 'login' | 'rank') => {
-    if (sortField === field) {
-      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('desc');
-    }
-  };
-  
-  // Filter and sort users
-  const filteredUsers = users
-    ? users
-        .filter(user => user && user.login && user.login.toLowerCase().includes(searchTerm.toLowerCase()))
-        .sort((a, b) => {
-          if (sortField === 'points') {
-            return sortDirection === 'desc' 
-              ? (b.stats?.points || 0) - (a.stats?.points || 0)
-              : (a.stats?.points || 0) - (b.stats?.points || 0);
-          } else if (sortField === 'login') {
-            return sortDirection === 'desc'
-              ? b.login.localeCompare(a.login)
-              : a.login.localeCompare(b.login);
-          } else {
-            // Sort by rank (manual rank first, then auto rank)
-            const aRank = a.stats?.manualRank || 9999;
-            const bRank = b.stats?.manualRank || 9999;
-            return sortDirection === 'desc' ? bRank - aRank : aRank - bRank;
-          }
-        })
-    : [];
-
-  // Add the fetchUsers function to properly refresh user data
-  const fetchUsers = async () => {
-    if (!isAuthenticated) return;
-    
-    setLoading(true);
-    try {
-      const users = await getActiveUsers();
-      setUsers(users);
-      console.log("Refreshed user data:", users.length, "users");
-    } catch (error) {
-      console.error("Error fetching users:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Add a button to show current manual ranks in the leaderboard management section
+  // Add the renderLeaderboardManagement function
   const renderLeaderboardManagement = () => {
     if (!isAuthenticated) return null;
     
@@ -789,129 +778,71 @@ export default function AdminPortal() {
         </div>
 
               <div className="max-h-[400px] overflow-y-auto">
-                <table className="w-full">
-                  <thead className="bg-[#161b22] sticky top-0 z-10">
-                    <tr>
-                      <th className="p-3 text-left">
-                        <button 
-                          onClick={() => toggleSort('login')}
-                          className="flex items-center text-sm font-medium"
-                        >
-                          User
-                          {sortField === 'login' && (
-                            <ArrowUpDown className={`w-3 h-3 ml-1 ${sortDirection === 'asc' ? 'rotate-180' : ''}`} />
-                          )}
-                        </button>
-                      </th>
-                      <th className="p-3 text-left">Level</th>
-                      <th className="p-3 text-left">
-                        <button 
-                          onClick={() => toggleSort('points')}
-                          className="flex items-center text-sm font-medium"
-                        >
-                          Points
-                          {sortField === 'points' && (
-                            <ArrowUpDown className={`w-3 h-3 ml-1 ${sortDirection === 'asc' ? 'rotate-180' : ''}`} />
-                          )}
-                        </button>
-                      </th>
-                      <th className="p-3 text-left">Auto Rank</th>
-                      <th className="p-3 text-left">
-                        <button 
-                          onClick={() => toggleSort('rank')}
-                          className="flex items-center text-sm font-medium"
-                        >
-                          Manual Rank
-                          {sortField === 'rank' && (
-                            <ArrowUpDown className={`w-3 h-3 ml-1 ${sortDirection === 'asc' ? 'rotate-180' : ''}`} />
-                          )}
-                        </button>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredUsers.length > 0 ? (
-                      filteredUsers
-                        .filter(user => !levelFilter || user.stats?.level === levelFilter)
-                        .map((user) => {
-                          const autoRank = usersWithAutoRank.find(u => u.login === user.login)?.autoRank || 0;
-                          
-                          return (
-                            <tr key={user.login} className="border-t border-[#30363d] hover:bg-[#161b22]">
-                              <td className="p-3 flex items-center gap-2">
-                            <Image 
-                                  src={user.avatar_url || `https://avatars.githubusercontent.com/${user.login}`}
-                              alt={user.login}
-                                  width={24}
-                                  height={24}
-                              className="rounded-full"
-                            />
-                                <span className="text-sm">{user.login}</span>
-                        </td>
-                              <td className="p-3">
-                                <span className={`text-xs px-2 py-1 rounded-full ${getLevelBadgeColor(user.stats?.level || 'Newcomer')}`}>
-                                  {user.stats?.level || 'Newcomer'}
-                          </span>
-                        </td>
-                              <td className="p-3 text-sm">{user.stats?.points || 0}</td>
-                              <td className="p-3 text-sm">{autoRank}</td>
-                              <td className="p-3">
-                                <input
-                                  type="number"
-                                  min="1"
-                                  placeholder="Auto"
-                                  value={user.stats?.manualRank || ''}
-                                  onChange={(e) => {
-                                    const value = e.target.value;
-                                    const rank = value === '' ? null : parseInt(value);
-                                    updateUserRank(user.login, rank);
-                                  }}
-                                  className="w-16 px-2 py-1 text-sm bg-[#161b22] border border-[#30363d] rounded-md focus:outline-none focus:ring-1 focus:ring-[#F778BA] focus:border-[#F778BA]"
-                                />
-                              </td>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-[#161b22] sticky top-0 z-10">
+                      <tr className="text-left text-[#8b949e] border-b border-[#30363d]">
+                        <th className="p-3">User</th>
+                        <th className="p-3">Points</th>
+                        <th className="p-3">Auto Rank</th>
+                        <th className="p-3">Manual Rank</th>
+                        <th className="p-3">Visibility</th>
                       </tr>
-                          );
-                        })
-                    ) : (
-                      <tr>
-                        <td colSpan={5} className="p-8 text-center text-[#8b949e]">
-                          {loading ? (
-                            <div className="flex justify-center">
-                              <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#F778BA] border-t-transparent"></div>
-                            </div>
-                          ) : (
-                            <>
-                              <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                              <p>No users found</p>
-                            </>
-                          )}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {users
+                        .sort((a, b) => (b.stats.points || 0) - (a.stats.points || 0))
+                        .map((user, index) => (
+                          <tr key={user.login} className="border-t border-[#30363d] hover:bg-[#161b22]">
+                            <td className="p-3 flex items-center gap-2">
+                              <Image 
+                                src={user.avatar_url || `https://avatars.githubusercontent.com/${user.login}`}
+                                alt={user.login}
+                                width={24}
+                                height={24}
+                                className="rounded-full"
+                              />
+                              <span className="text-sm">{user.login}</span>
+                            </td>
+                            <td className="p-3">{user.stats.points}</td>
+                            <td className="p-3">{index + 1}</td>
+                            <td className="p-3">
+                              <input
+                                type="number"
+                                min="1"
+                                placeholder="Auto"
+                                value={user.stats.manualRank || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  const rank = value === '' ? null : parseInt(value);
+                                  updateUserRank(user.login, rank);
+                                }}
+                                className="w-16 px-2 py-1 bg-[#0d1117] border border-[#30363d] rounded-md"
+                              />
+                            </td>
+                            <td className="p-3">
+                              <button
+                                onClick={() => toggleUserVisibility(user.login, !user.stats.hidden)}
+                                className={`px-3 py-1 rounded-md text-sm ${
+                                  user.stats.hidden
+                                    ? 'bg-red-900/30 text-red-400 hover:bg-red-900/50'
+                                    : 'bg-green-900/30 text-green-400 hover:bg-green-900/50'
+                                }`}
+                              >
+                                {user.stats.hidden ? 'Hidden' : 'Visible'}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
     );
-  };
-
-  // Helper function to get level badge color
-  const getLevelBadgeColor = (level: string) => {
-    switch (level) {
-      case 'Expert':
-        return 'bg-purple-900/30 text-purple-400 border border-purple-900/50';
-      case 'Advanced':
-        return 'bg-blue-900/30 text-blue-400 border border-blue-900/50';
-      case 'Intermediate':
-        return 'bg-green-900/30 text-green-400 border border-green-900/50';
-      case 'Beginner':
-        return 'bg-yellow-900/30 text-yellow-400 border border-yellow-900/50';
-      default:
-        return 'bg-gray-900/30 text-gray-400 border border-gray-900/50';
-    }
   };
 
   // Add the clearAllManualRanks function to remove all manual ranks
@@ -978,6 +909,42 @@ export default function AdminPortal() {
     });
     
     setTimeout(() => setSettingsMessage(null), 3000);
+  };
+
+  // Add this function near your other admin functions
+  const toggleUserVisibility = async (username: string, hidden: boolean) => {
+    try {
+      const userRef = ref(db, `test/manualRanks/${username}`);
+      
+      // First get existing data to preserve other fields
+      const snapshot = await get(userRef);
+      const existingData = snapshot.exists() ? snapshot.val() : {};
+      
+      // Update with existing data plus new hidden status
+      await update(userRef, {
+        ...existingData,
+        hidden,
+        updatedAt: new Date().toISOString()
+      });
+      
+      // Update local state
+      setUsers(prev => prev.map(user => {
+        if (user.login === username) {
+          return {
+            ...user,
+            stats: {
+              ...user.stats,
+              hidden
+            }
+          };
+        }
+        return user;
+      }));
+      
+      console.log(`User ${username} visibility updated: ${hidden ? 'hidden' : 'visible'}`);
+    } catch (error) {
+      console.error("Error updating user visibility:", error);
+    }
   };
 
   return (
@@ -1075,7 +1042,7 @@ export default function AdminPortal() {
                 <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
                   {loading ? (
                     <div className="flex items-center justify-center h-40">
-                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#F778BA]"></div>
+                      <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#F778BA] border-t-transparent"></div>
                     </div>
                   ) : (
                     <div className="space-y-1 p-2">

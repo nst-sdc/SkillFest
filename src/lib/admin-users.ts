@@ -6,4 +6,6 @@ export const ADMIN_USERS = [
   "tanubhavk",
   "codervipul775",
   "Arohi-jd",
+  "biru-codeastromer",
+  "AryanVBW"
 ]; 
