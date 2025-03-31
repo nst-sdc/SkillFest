@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from "react";
-import { ArrowLeft, Shield, Lock, Eye, EyeOff, GitPullRequest, GitMerge, ExternalLink, X, Calendar, ChevronLeft, ChevronRight, Check, AlertTriangle, Trophy, Save, RefreshCw, Search, ArrowUpDown, Users } from "lucide-react";
+import { ArrowLeft, Shield, Lock, Eye, EyeOff, GitPullRequest, ExternalLink, X, Calendar, ChevronLeft, ChevronRight, Check, AlertTriangle, Trophy, Save, RefreshCw, Search, ArrowUpDown, Users } from "lucide-react";
 import Link from "next/link";
 import { getActiveUsers } from "@/lib/firebase";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
+import { ADMIN_USERS } from "@/lib/admin-users";
 
 // Define types for our admin portal
 type AdminUser = {
@@ -197,7 +198,6 @@ export default function AdminPortal() {
   const [recalculatingPoints, setRecalculatingPoints] = useState(false);
   const [dateFilter, setDateFilter] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [reviewedPRs, setReviewedPRs] = useState<Record<number, 'reviewed' | 'invalid'>>({});
   const [showLeaderboardSettings, setShowLeaderboardSettings] = useState(false);
   const [leaderboardSettings, setLeaderboardSettings] = useState<LeaderboardSettings>({
     visible: true,
@@ -419,8 +419,10 @@ export default function AdminPortal() {
     }
   };
 
+  // Comment out the unused markPR function
   // Function to mark a PR as reviewed or invalid
-  const markPR = (prId: number, status: 'reviewed' | 'invalid') => {
+  /* 
+  const markPR = async (prId: number, status: 'reviewed' | 'invalid' | null) => {
     setReviewedPRs(prev => {
       // If already marked with same status, remove the mark (toggle)
       if (prev[prId] === status) {
@@ -440,6 +442,7 @@ export default function AdminPortal() {
       }));
     }, 0);
   };
+  */
   
   // Load leaderboard settings on component mount
   useEffect(() => {
@@ -846,7 +849,14 @@ export default function AdminPortal() {
                                   height={24}
                               className="rounded-full"
                             />
-                                <span className="text-sm">{user.login}</span>
+                                <span className="text-sm">
+                                  {user.login}
+                                  {ADMIN_USERS.includes(user.login) && (
+                                    <span className="ml-1 px-1 py-0.25 text-[0.6rem] bg-[#F778BA]/20 text-[#F778BA] rounded">
+                                      Admin
+                                    </span>
+                                  )}
+                                </span>
                         </td>
                               <td className="p-3">
                                 <span className={`text-xs px-2 py-1 rounded-full ${getLevelBadgeColor(user.stats?.level || 'Newcomer')}`}>
@@ -1152,7 +1162,14 @@ export default function AdminPortal() {
                                   className="rounded-full"
                                 />
                                 <div>
-                                  <div className="font-medium">{user.login}</div>
+                                  <div className="font-medium">
+                                    {user.login}
+                                    {ADMIN_USERS.includes(user.login) && (
+                                      <span className="ml-1 px-1 py-0.25 text-[0.6rem] bg-[#F778BA]/20 text-[#F778BA] rounded">
+                                        Admin
+                                      </span>
+                                    )}
+                                  </div>
                                   <div className="text-xs text-[#8b949e]">
                                     {user.stats.level} • {calculatedPoints} points
                                   </div>
@@ -1386,116 +1403,6 @@ export default function AdminPortal() {
                           </div>
                         </div>
                         
-                        {userDetail && userDetail.pullRequests.length < (users.find(u => u.login === selectedUser)?.stats.totalPRs || 0) && (
-                          <div className="mb-4 p-3 bg-yellow-900/20 border border-yellow-900/30 text-yellow-400 rounded-md text-sm">
-                            <p className="font-medium">Note: Only showing {userDetail.pullRequests.length} of {users.find(u => u.login === selectedUser)?.stats.totalPRs} total PRs</p>
-                            <p>GitHub API limits prevent showing all PRs. Points are calculated based on all PRs.</p>
-                          </div>
-                        )}
-                        
-                        <div className="space-y-3">
-                          {userDetail.pullRequests
-                            .filter(pr => {
-                              if (prFilter !== 'all') {
-                                if (prFilter === 'merged' && pr.state !== 'merged') return false;
-                                if (prFilter === 'open' && pr.state !== 'open') return false;
-                              }
-                              
-                              if (orgFilter !== 'all') {
-                                if (orgFilter === 'org' && !pr.isOrg) return false;
-                                if (orgFilter === 'personal' && pr.isOrg) return false;
-                              }
-                              
-                              if (dateFilter && !isPRAfterDate(pr.created_at, dateFilter)) {
-                                return false;
-                              }
-                              
-                              return true;
-                            })
-                            .map(pr => (
-                              <a 
-                                key={pr.id}
-                                href={pr.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={`block p-4 rounded-lg border ${
-                                  reviewedPRs[pr.id] === 'reviewed' 
-                                    ? 'border-green-600 bg-green-900/10' 
-                                    : reviewedPRs[pr.id] === 'invalid'
-                                      ? 'border-red-600 bg-red-900/10'
-                                      : 'border-[#30363d] bg-[#0d1117]'
-                                } hover:border-[#58a6ff]/30 transition-colors`}
-                              >
-                                <div className="flex justify-between">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-2">
-                                    {pr.state === 'merged' ? (
-                                        <GitMerge className="w-4 h-4 text-purple-500" />
-                                      ) : (
-                                        <GitPullRequest className="w-4 h-4 text-green-500" />
-                                      )}
-                                      <span className="font-medium text-white">{pr.title}</span>
-                                    {pr.isOrg && (
-                                        <span className="px-2 py-0.5 text-xs rounded-full bg-blue-900/30 text-blue-400 border border-blue-900/50">
-                                        Organization
-                                      </span>
-                                    )}
-                                      {/* Add point tag */}
-                                      <span className="px-2 py-0.5 text-xs rounded-full bg-green-900/30 text-green-400 border border-green-900/50">
-                                        +{pr.isOrg 
-                                          ? (pr.state === 'merged' ? '15' : '10') 
-                                          : (pr.state === 'merged' ? '7' : '5')
-                                        } pts
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-xs text-[#8b949e]">
-                                      <span>
-                                        {pr.state === 'merged'
-                                          ? `Merged on ${new Date(pr.merged_at!).toLocaleDateString()}`
-                                          : `Created on ${new Date(pr.created_at).toLocaleDateString()}`}
-                                      </span>
-                                      <ExternalLink className="w-4 h-4 text-[#8b949e]" />
-                                    </div>
-                                  </div>
-                                  
-                                  {/* Add review action buttons */}
-                                  <div className="flex items-start gap-2 ml-4" onClick={(e) => e.preventDefault()}>
-                                    <button
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        markPR(pr.id, 'reviewed');
-                                      }}
-                                      className={`p-2 rounded-md ${
-                                        reviewedPRs[pr.id] === 'reviewed'
-                                          ? 'bg-green-600 text-white'
-                                          : 'bg-[#21262d] text-[#8b949e] hover:bg-green-900/30 hover:text-green-400'
-                                      }`}
-                                      title="Mark as Reviewed"
-                                    >
-                                      <Check className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        markPR(pr.id, 'invalid');
-                                      }}
-                                      className={`p-2 rounded-md ${
-                                        reviewedPRs[pr.id] === 'invalid'
-                                          ? 'bg-red-600 text-white'
-                                          : 'bg-[#21262d] text-[#8b949e] hover:bg-red-900/30 hover:text-red-400'
-                                      }`}
-                                      title="Mark as Invalid"
-                                    >
-                                      <AlertTriangle className="w-4 h-4" />
-                                    </button>
-                                  </div>
-                                </div>
-                              </a>
-                            ))}
-                        </div>
-                        
                         {userDetail.pullRequests
                           .filter(pr => {
                             if (prFilter !== 'all') {
@@ -1616,7 +1523,14 @@ export default function AdminPortal() {
                               height={24}
                               className="rounded-full"
                             />
-                            <span>{user.login}</span>
+                            <span>
+                              {user.login}
+                              {ADMIN_USERS.includes(user.login) && (
+                                <span className="ml-1 px-1 py-0.25 text-[0.6rem] bg-[#F778BA]/20 text-[#F778BA] rounded">
+                                  Admin
+                                </span>
+                              )}
+                            </span>
                           </td>
                           <td className="p-3">{user.stats.points}</td>
                           <td className="p-3">{index + 1}</td>

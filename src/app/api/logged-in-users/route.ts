@@ -5,6 +5,7 @@ import { addUserToDatabase, storePullRequests } from "@/lib/firebase";
 import { calculatePoints, getContributionLevel } from "@/lib/points-calculator";
 import { ref, get } from "firebase/database";
 import { db } from "@/lib/firebase-config";
+import { ADMIN_USERS } from "@/lib/admin-users";
 
 // Add types for GitHub API responses
 type GitHubRepo = {
@@ -87,8 +88,11 @@ export async function GET() {
       };
     });
     
-    console.log(`API: Found ${usersArray.length} users`);
-    return NextResponse.json(usersArray);
+    // Filter out admin users from the public leaderboard
+    const filteredUsers = usersArray.filter(user => !ADMIN_USERS.includes(user.login));
+    
+    console.log(`API: Found ${filteredUsers.length} non-admin users out of ${usersArray.length} total users`);
+    return NextResponse.json(filteredUsers);
   } catch (error) {
     console.error("API: Error fetching users:", error);
     return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });

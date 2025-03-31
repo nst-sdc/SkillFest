@@ -1,5 +1,6 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getDatabase, ref, set, get, child, update, Database } from "firebase/database";
+import { ADMIN_USERS } from "@/lib/admin-users";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -294,6 +295,7 @@ export const getActiveUsers = async () => {
       return Object.values(users).map((user) => ({
         login: user.login,
         lastActive: new Date(user.lastActive),
+        isAdmin: ADMIN_USERS.includes(user.login),
         stats: {
           totalPRs: user.stats?.totalPRs || 0,
           mergedPRs: user.stats?.mergedPRs || 0,
