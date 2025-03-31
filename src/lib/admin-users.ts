@@ -1,4 +1,4 @@
-// Create a new file for admin users
+// Create a new file to store the admin users list
 export const ADMIN_USERS = [
   "KanishkRanjan",
   "CodeMaverick-143", 
