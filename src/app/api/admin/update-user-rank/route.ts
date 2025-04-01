@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../auth/auth-options";
-import { ref, update } from "firebase/database";
+import { ref, update, get } from "firebase/database";
 import { db } from "@/lib/firebase-config";
 
 export async function POST(request: Request) {
@@ -13,20 +13,28 @@ export async function POST(request: Request) {
   }
   
   try {
-    const { username, rank } = await request.json();
+    const { username, rank, points } = await request.json();
     console.log(`Admin API: Updating rank for ${username} to ${rank}`);
     
-    // Use the test path for storing manual ranks
+    // Get existing data first
     const userRef = ref(db, `test/manualRanks/${username}`);
+    const snapshot = await get(userRef);
+    const existingData = snapshot.exists() ? snapshot.val() : {};
     
-    // If rank is null, remove the manual rank
-    if (rank === null) {
-      await update(userRef, { manualRank: null });
-      console.log(`Admin API: Removed manual rank for ${username}`);
-    } else {
-      // Otherwise, set the manual rank
-      await update(userRef, { manualRank: rank });
-      console.log(`Admin API: Set manual rank for ${username} to ${rank}`);
+    // Update with new data
+    const updates = {
+      ...existingData,
+      manualRank: rank,
+      points: points !== undefined ? points : existingData.points, // Only update points if provided
+      updatedAt: new Date().toISOString()
+    };
+    
+    await update(userRef, updates);
+    
+    // Also update the user's points in the main users collection if points were provided
+    if (points !== undefined) {
+      const userStatsRef = ref(db, `users/${username}/stats`);
+      await update(userStatsRef, { points });
     }
     
     return NextResponse.json({ 

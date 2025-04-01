@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { ArrowLeft, Shield, Lock, Eye, EyeOff, GitPullRequest, GitMerge, ExternalLink, X, Calendar, ChevronLeft, ChevronRight, Check, AlertTriangle, Trophy, Save, RefreshCw, Search, Users } from "lucide-react";
 import Link from "next/link";
 import { getActiveUsers } from "@/lib/firebase";
@@ -8,6 +8,7 @@ import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { ref, update, get } from "firebase/database";
 import { db } from "@/lib/firebase-config";
+import debounce from 'lodash/debounce';
 
 // Define types for our admin portal
 type AdminUser = {
@@ -178,6 +179,12 @@ type LeaderboardSettings = {
   lastUpdated: string;
 };
 
+// Add this type near other type definitions
+type PointsUpdate = {
+  username: string;
+  points: number;
+};
+
 export default function AdminPortal() {
   const { /* data: session, status */ } = useSession({
     required: true,
@@ -215,6 +222,23 @@ export default function AdminPortal() {
 
   // Add search and sort state
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Add this state with other state declarations
+  const [tempPoints, setTempPoints] = useState<Record<string, number>>({});
+  const [isUpdatingPoints, setIsUpdatingPoints] = useState<Record<string, boolean>>({});
+
+  // Add this debounced function after state declarations
+  const debouncedUpdatePoints = useCallback(
+    debounce(async (update: PointsUpdate) => {
+      try {
+        setIsUpdatingPoints(prev => ({ ...prev, [update.username]: true }));
+        await updateUserRank(update.username, null, update.points);
+      } finally {
+        setIsUpdatingPoints(prev => ({ ...prev, [update.username]: false }));
+      }
+    }, 1000),
+    []
+  );
 
   // Move fetchUsers outside useEffect and make it a function we can reuse
   const fetchUsers = async () => {
@@ -349,14 +373,15 @@ export default function AdminPortal() {
   };
 
   // Update the updateUserRank function to use the fetchUsers function
-  const updateUserRank = async (username: string, rank: number | null) => {
+  const updateUserRank = async (username: string, rank: number | null, points?: number) => {
     try {
+      // First update the manual rank
       const response = await fetch('/api/admin/update-user-rank', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, rank }),
+        body: JSON.stringify({ username, rank, points }), // Include points in the request
         credentials: 'include',
       });
       
@@ -369,7 +394,8 @@ export default function AdminPortal() {
                 ...user,
                 stats: {
                   ...user.stats,
-                  manualRank: rank
+                  manualRank: rank,
+                  points: points !== undefined ? points : user.stats.points // Update points if provided
                 }
               };
             }
@@ -379,12 +405,11 @@ export default function AdminPortal() {
         
         setSettingsMessage({ 
           type: 'success', 
-          text: `Rank for ${username} ${rank ? `set to ${rank}` : 'cleared'}` 
+          text: `Updated ${username}: ${rank ? `rank ${rank}` : 'cleared rank'}${points !== undefined ? `, points ${points}` : ''}` 
         });
         
         setTimeout(() => setSettingsMessage(null), 2000);
         
-        // Now we can safely call fetchUsers
         if (isAuthenticated) {
           await fetchUsers();
         }
@@ -804,7 +829,31 @@ export default function AdminPortal() {
                               />
                               <span className="text-sm">{user.login}</span>
                             </td>
-                            <td className="p-3">{user.stats.points}</td>
+                            <td className="p-3">
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="number"
+                                  value={tempPoints[user.login] !== undefined ? tempPoints[user.login] : user.stats.points || 0}
+                                  onChange={(e) => {
+                                    const newPoints = parseInt(e.target.value) || 0;
+                                    setTempPoints(prev => ({
+                                      ...prev,
+                                      [user.login]: newPoints
+                                    }));
+                                    debouncedUpdatePoints({ username: user.login, points: newPoints });
+                                  }}
+                                  className={`w-20 px-2 py-1 bg-[#0d1117] border ${
+                                    isUpdatingPoints[user.login] 
+                                      ? 'border-[#238636]' 
+                                      : 'border-[#30363d]'
+                                  } rounded-md`}
+                                  disabled={isUpdatingPoints[user.login]}
+                                />
+                                {isUpdatingPoints[user.login] && (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-[#238636] border-t-transparent"/>
+                                )}
+                              </div>
+                            </td>
                             <td className="p-3">{index + 1}</td>
                             <td className="p-3">
                               <input
@@ -815,7 +864,7 @@ export default function AdminPortal() {
                                 onChange={(e) => {
                                   const value = e.target.value;
                                   const rank = value === '' ? null : parseInt(value);
-                                  updateUserRank(user.login, rank);
+                                  updateUserRank(user.login, rank, user.stats.points);
                                 }}
                                 className="w-16 px-2 py-1 bg-[#0d1117] border border-[#30363d] rounded-md"
                               />
@@ -1596,7 +1645,7 @@ export default function AdminPortal() {
                               onChange={(e) => {
                                 const value = e.target.value;
                                 const rank = value === '' ? null : parseInt(value);
-                                updateUserRank(user.login, rank);
+                                updateUserRank(user.login, rank, user.stats.points);
                               }}
                               className="w-16 px-2 py-1 bg-[#0d1117] border border-[#30363d] rounded-md"
                             />
