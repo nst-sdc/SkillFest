@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession } from "next-auth/react";
-import { ArrowLeft, Trophy, GitPullRequest, Star, Award, Lock } from "lucide-react";
+import { ArrowLeft, Trophy, Star, Award, Lock } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
 import Image from 'next/image';
@@ -109,8 +109,8 @@ export default function Leaderboard() {
         html_url: `https://github.com/${user.login}`,
         rank: user.stats.manualRank || index + 1, // Use manual rank or calculated rank
         contributions: user.stats.contributions || 0,
-        // points: user.stats.points || 0,
-        // level: user.stats.level || 'Newcomer',
+        points: user.stats.points || 0,
+        level: user.stats.level || 'Newcomer',
         pullRequests: {
           // total: user.stats.totalPRs || 0,
           // merged: user.stats.mergedPRs || 0,
@@ -268,10 +268,6 @@ export default function Leaderboard() {
                         <div>
                           <h3 className="font-medium text-white">{contributor.login}</h3>
                           <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-[#8b949e]">
-                            <div className="flex items-center gap-1">
-                              <GitPullRequest className="w-4 h-4" />
-                              <span>{contributor.pullRequests.merged}/{contributor.pullRequests.total} PRs</span>
-                            </div>
                             <div className="flex items-center gap-1">
                               <Star className="w-4 h-4" />
                               <span>{contributor.points} points</span>

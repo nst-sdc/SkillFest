@@ -227,7 +227,64 @@ export default function AdminPortal() {
   const [tempPoints, setTempPoints] = useState<Record<string, number>>({});
   const [isUpdatingPoints, setIsUpdatingPoints] = useState<Record<string, boolean>>({});
 
-  // Add this debounced function after state declarations
+  // Move updateUserRank before debouncedUpdatePoints
+  const updateUserRank = async (username: string, rank: number | null, points?: number) => {
+    try {
+      const response = await fetch('/api/admin/update-user-rank', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, rank, points }),
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        setUsers((prevUsers) => {
+          return prevUsers.map((user) => {
+            if (user.login === username) {
+              return {
+                ...user,
+                stats: {
+                  ...user.stats,
+                  manualRank: rank,
+                  points: points !== undefined ? points : user.stats.points
+                }
+              };
+            }
+            return user;
+          });
+        });
+        
+        setSettingsMessage({ 
+          type: 'success', 
+          text: `Updated ${username}: ${rank ? `rank ${rank}` : 'cleared rank'}${points !== undefined ? `, points ${points}` : ''}` 
+        });
+        
+        setTimeout(() => setSettingsMessage(null), 2000);
+        
+        if (isAuthenticated) {
+          await fetchUsers();
+        }
+      } else {
+        console.error("Failed to update user rank");
+        setSettingsMessage({ 
+          type: 'error', 
+          text: 'Failed to update rank' 
+        });
+        setTimeout(() => setSettingsMessage(null), 2000);
+      }
+    } catch (error) {
+      console.error("Error updating user rank:", error);
+      setSettingsMessage({ 
+        type: 'error', 
+        text: error instanceof Error ? error.message : 'Unknown error occurred' 
+      });
+      setTimeout(() => setSettingsMessage(null), 2000);
+    }
+  };
+
+  // Then define debouncedUpdatePoints
   const debouncedUpdatePoints = useCallback(
     debounce(async (update: PointsUpdate) => {
       try {
@@ -237,7 +294,7 @@ export default function AdminPortal() {
         setIsUpdatingPoints(prev => ({ ...prev, [update.username]: false }));
       }
     }, 1000),
-    []
+    [updateUserRank]
   );
 
   // Move fetchUsers outside useEffect and make it a function we can reuse
@@ -253,14 +310,18 @@ export default function AdminPortal() {
       const manualRanks = manualRanksSnapshot.exists() ? manualRanksSnapshot.val() : {};
       
       // Combine user data with manual ranks and visibility
-      const updatedUsers = users.map(user => ({
-        ...user,
-        stats: {
-          ...user.stats,
-          manualRank: manualRanks[user.login]?.manualRank || null,
-          hidden: manualRanks[user.login]?.hidden || false
-        }
-      }));
+      const updatedUsers = users
+        .filter(user => user && user.login) // Filter out invalid users
+        .map(user => ({
+          ...user,
+          stats: {
+            ...user.stats,
+            manualRank: manualRanks[user.login]?.manualRank || null,
+            hidden: manualRanks[user.login]?.hidden || false,
+            level: user.stats?.level || 'Newcomer', // Ensure level exists
+            points: user.stats?.points || 0 // Ensure points exists
+          }
+        }));
       
       setUsers(updatedUsers);
     } catch (error) {
@@ -372,65 +433,6 @@ export default function AdminPortal() {
     return prDateTime >= filterDate.getTime();
   };
 
-  // Update the updateUserRank function to use the fetchUsers function
-  const updateUserRank = async (username: string, rank: number | null, points?: number) => {
-    try {
-      // First update the manual rank
-      const response = await fetch('/api/admin/update-user-rank', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, rank, points }), // Include points in the request
-        credentials: 'include',
-      });
-      
-      if (response.ok) {
-        // Update local state with proper typing
-        setUsers((prevUsers) => {
-          return prevUsers.map((user) => {
-            if (user.login === username) {
-              return {
-                ...user,
-                stats: {
-                  ...user.stats,
-                  manualRank: rank,
-                  points: points !== undefined ? points : user.stats.points // Update points if provided
-                }
-              };
-            }
-            return user;
-          });
-        });
-        
-        setSettingsMessage({ 
-          type: 'success', 
-          text: `Updated ${username}: ${rank ? `rank ${rank}` : 'cleared rank'}${points !== undefined ? `, points ${points}` : ''}` 
-        });
-        
-        setTimeout(() => setSettingsMessage(null), 2000);
-        
-        if (isAuthenticated) {
-          await fetchUsers();
-        }
-      } else {
-        console.error("Failed to update user rank");
-        setSettingsMessage({ 
-          type: 'error', 
-          text: 'Failed to update rank' 
-        });
-        setTimeout(() => setSettingsMessage(null), 2000);
-      }
-    } catch (error) {
-      console.error("Error updating user rank:", error);
-      setSettingsMessage({ 
-        type: 'error', 
-        text: error instanceof Error ? error.message : 'Unknown error occurred' 
-      });
-      setTimeout(() => setSettingsMessage(null), 2000);
-    }
-  };
-  
   // Fix the saveLeaderboardSettings function
   const saveLeaderboardSettings = async () => {
     if (isSavingSettings) return;
@@ -734,23 +736,21 @@ export default function AdminPortal() {
                   <p className="text-xs text-[#8b949e]">Assign custom ranks to override the automatic point-based ranking</p>
             </div>
                 
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-[#8b949e]" />
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8b949e]" />
                     <input
                       type="text"
-                      placeholder="Search users..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9 pr-4 py-1.5 text-sm bg-[#161b22] border border-[#30363d] rounded-md w-full focus:outline-none focus:ring-1 focus:ring-[#F778BA] focus:border-[#F778BA]"
+                      placeholder="Search users..."
+                      className="w-full pl-10 pr-4 py-2 bg-[#0d1117] border border-[#30363d] rounded-lg text-white placeholder-[#8b949e] focus:outline-none focus:border-[#58a6ff]"
                     />
-          </div>
-                  
-                  {/* Add level filter dropdown */}
+                  </div>
                   <select
                     value={levelFilter || 'all'}
                     onChange={(e) => setLevelFilter(e.target.value === 'all' ? null : e.target.value)}
-                    className="py-1.5 px-3 text-sm bg-[#161b22] border border-[#30363d] rounded-md focus:outline-none focus:ring-1 focus:ring-[#F778BA] focus:border-[#F778BA]"
+                    className="px-4 py-2 bg-[#21262d] border border-[#30363d] rounded-lg text-white"
                   >
                     <option value="all">All Levels</option>
                     <option value="Expert">Expert</option>
@@ -759,8 +759,8 @@ export default function AdminPortal() {
                     <option value="Beginner">Beginner</option>
                     <option value="Newcomer">Newcomer</option>
                   </select>
-            </div>
-          </div>
+                </div>
+              </div>
               
               {/* Level-based tabs for larger screens */}
               <div className="hidden lg:flex border-b border-[#30363d]">
@@ -802,24 +802,24 @@ export default function AdminPortal() {
                 </button>
         </div>
 
-              <div className="max-h-[400px] overflow-y-auto">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-[#161b22] sticky top-0 z-10">
-                      <tr className="text-left text-[#8b949e] border-b border-[#30363d]">
-                        <th className="p-3">User</th>
-                        <th className="p-3">Points</th>
-                        <th className="p-3">Auto Rank</th>
-                        <th className="p-3">Manual Rank</th>
-                        <th className="p-3">Visibility</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {users
-                        .sort((a, b) => (b.stats.points || 0) - (a.stats.points || 0))
-                        .map((user, index) => (
-                          <tr key={user.login} className="border-t border-[#30363d] hover:bg-[#161b22]">
-                            <td className="p-3 flex items-center gap-2">
+              <div className="max-h-80 overflow-y-auto border border-[#30363d] rounded-lg">
+                <table className="w-full">
+                  <thead className="bg-[#161b22] sticky top-0">
+                    <tr>
+                      <th className="p-3 text-left">User</th>
+                      <th className="p-3 text-left">Points</th>
+                      <th className="p-3 text-left">Auto Rank</th>
+                      <th className="p-3 text-left">Manual Rank</th>
+                      <th className="p-3 text-left">Visibility</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filterUsers(users, searchTerm, levelFilter)
+                      .sort((a, b) => (b.stats.points || 0) - (a.stats.points || 0))
+                      .map((user, index) => (
+                        <tr key={user.login} className="border-t border-[#30363d]">
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
                               <Image 
                                 src={user.avatar_url || `https://avatars.githubusercontent.com/${user.login}`}
                                 alt={user.login}
@@ -827,65 +827,65 @@ export default function AdminPortal() {
                                 height={24}
                                 className="rounded-full"
                               />
-                              <span className="text-sm">{user.login}</span>
-                            </td>
-                            <td className="p-3">
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="number"
-                                  value={tempPoints[user.login] !== undefined ? tempPoints[user.login] : user.stats.points || 0}
-                                  onChange={(e) => {
-                                    const newPoints = parseInt(e.target.value) || 0;
-                                    setTempPoints(prev => ({
-                                      ...prev,
-                                      [user.login]: newPoints
-                                    }));
-                                    debouncedUpdatePoints({ username: user.login, points: newPoints });
-                                  }}
-                                  className={`w-20 px-2 py-1 bg-[#0d1117] border ${
-                                    isUpdatingPoints[user.login] 
-                                      ? 'border-[#238636]' 
-                                      : 'border-[#30363d]'
-                                  } rounded-md`}
-                                  disabled={isUpdatingPoints[user.login]}
-                                />
-                                {isUpdatingPoints[user.login] && (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-[#238636] border-t-transparent"/>
-                                )}
-                              </div>
-                            </td>
-                            <td className="p-3">{index + 1}</td>
-                            <td className="p-3">
+                              <span>{user.login}</span>
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
                               <input
                                 type="number"
-                                min="1"
-                                placeholder="Auto"
-                                value={user.stats.manualRank || ''}
+                                value={tempPoints[user.login] !== undefined ? tempPoints[user.login] : user.stats.points || 0}
                                 onChange={(e) => {
-                                  const value = e.target.value;
-                                  const rank = value === '' ? null : parseInt(value);
-                                  updateUserRank(user.login, rank, user.stats.points);
+                                  const newPoints = parseInt(e.target.value) || 0;
+                                  setTempPoints(prev => ({
+                                    ...prev,
+                                    [user.login]: newPoints
+                                  }));
+                                  debouncedUpdatePoints({ username: user.login, points: newPoints });
                                 }}
-                                className="w-16 px-2 py-1 bg-[#0d1117] border border-[#30363d] rounded-md"
+                                className={`w-20 px-2 py-1 bg-[#0d1117] border ${
+                                  isUpdatingPoints[user.login] 
+                                    ? 'border-[#238636]' 
+                                    : 'border-[#30363d]'
+                                } rounded-md`}
+                                disabled={isUpdatingPoints[user.login]}
                               />
-                            </td>
-                            <td className="p-3">
-                              <button
-                                onClick={() => toggleUserVisibility(user.login, !user.stats.hidden)}
-                                className={`px-3 py-1 rounded-md text-sm ${
-                                  user.stats.hidden
-                                    ? 'bg-red-900/30 text-red-400 hover:bg-red-900/50'
-                                    : 'bg-green-900/30 text-green-400 hover:bg-green-900/50'
-                                }`}
-                              >
-                                {user.stats.hidden ? 'Hidden' : 'Visible'}
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
+                              {isUpdatingPoints[user.login] && (
+                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-[#238636] border-t-transparent"/>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-3">{index + 1}</td>
+                          <td className="p-3">
+                            <input
+                              type="number"
+                              min="1"
+                              placeholder="Auto"
+                              value={user.stats.manualRank || ''}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                const rank = value === '' ? null : parseInt(value);
+                                updateUserRank(user.login, rank, user.stats.points);
+                              }}
+                              className="w-16 px-2 py-1 bg-[#0d1117] border border-[#30363d] rounded-md"
+                            />
+                          </td>
+                          <td className="p-3">
+                            <button
+                              onClick={() => toggleUserVisibility(user.login, !user.stats.hidden)}
+                              className={`px-3 py-1 rounded-md text-sm ${
+                                user.stats.hidden
+                                  ? 'bg-red-900/30 text-red-400 hover:bg-red-900/50'
+                                  : 'bg-green-900/30 text-green-400 hover:bg-green-900/50'
+                              }`}
+                            >
+                              {user.stats.hidden ? 'Hidden' : 'Visible'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -994,6 +994,24 @@ export default function AdminPortal() {
     } catch (error) {
       console.error("Error updating user visibility:", error);
     }
+  };
+
+  // Update the filterUsers function with null checks
+  const filterUsers = (users: AdminUser[], searchTerm: string, levelFilter: string | null) => {
+    if (!users) return [];
+    
+    return users.filter(user => {
+      if (!user || !user.login) return false;
+      
+      const matchesSearch = searchTerm 
+        ? user.login.toLowerCase().includes(searchTerm.toLowerCase())
+        : true;
+        
+      const matchesLevel = !levelFilter || 
+        (user.stats && user.stats.level === levelFilter);
+        
+      return matchesSearch && matchesLevel;
+    });
   };
 
   return (
@@ -1617,24 +1635,51 @@ export default function AdminPortal() {
                       <th className="p-3 text-left">Points</th>
                       <th className="p-3 text-left">Auto Rank</th>
                       <th className="p-3 text-left">Manual Rank</th>
+                      <th className="p-3 text-left">Visibility</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {users
+                    {filterUsers(users, searchTerm, levelFilter)
                       .sort((a, b) => (b.stats.points || 0) - (a.stats.points || 0))
                       .map((user, index) => (
                         <tr key={user.login} className="border-t border-[#30363d]">
-                          <td className="p-3 flex items-center gap-2">
-                            <Image 
-                              src={user.avatar_url || `https://avatars.githubusercontent.com/${user.login}`}
-                              alt={user.login}
-                              width={24}
-                              height={24}
-                              className="rounded-full"
-                            />
-                            <span>{user.login}</span>
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
+                              <Image 
+                                src={user.avatar_url || `https://avatars.githubusercontent.com/${user.login}`}
+                                alt={user.login}
+                                width={24}
+                                height={24}
+                                className="rounded-full"
+                              />
+                              <span>{user.login}</span>
+                            </div>
                           </td>
-                          <td className="p-3">{user.stats.points}</td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                value={tempPoints[user.login] !== undefined ? tempPoints[user.login] : user.stats.points || 0}
+                                onChange={(e) => {
+                                  const newPoints = parseInt(e.target.value) || 0;
+                                  setTempPoints(prev => ({
+                                    ...prev,
+                                    [user.login]: newPoints
+                                  }));
+                                  debouncedUpdatePoints({ username: user.login, points: newPoints });
+                                }}
+                                className={`w-20 px-2 py-1 bg-[#0d1117] border ${
+                                  isUpdatingPoints[user.login] 
+                                    ? 'border-[#238636]' 
+                                    : 'border-[#30363d]'
+                                } rounded-md`}
+                                disabled={isUpdatingPoints[user.login]}
+                              />
+                              {isUpdatingPoints[user.login] && (
+                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-[#238636] border-t-transparent"/>
+                              )}
+                            </div>
+                          </td>
                           <td className="p-3">{index + 1}</td>
                           <td className="p-3">
                             <input
@@ -1649,6 +1694,18 @@ export default function AdminPortal() {
                               }}
                               className="w-16 px-2 py-1 bg-[#0d1117] border border-[#30363d] rounded-md"
                             />
+                          </td>
+                          <td className="p-3">
+                            <button
+                              onClick={() => toggleUserVisibility(user.login, !user.stats.hidden)}
+                              className={`px-3 py-1 rounded-md text-sm ${
+                                user.stats.hidden
+                                  ? 'bg-red-900/30 text-red-400 hover:bg-red-900/50'
+                                  : 'bg-green-900/30 text-green-400 hover:bg-green-900/50'
+                              }`}
+                            >
+                              {user.stats.hidden ? 'Hidden' : 'Visible'}
+                            </button>
                           </td>
                         </tr>
                       ))}
