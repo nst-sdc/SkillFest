@@ -1,7 +1,25 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { ArrowLeft, Shield, Lock, Eye, EyeOff, GitPullRequest, GitMerge, ExternalLink, X, Calendar, ChevronLeft, ChevronRight, Check, AlertTriangle, Trophy, Save, RefreshCw, Search, Users } from "lucide-react";
+import { 
+  ArrowLeft, 
+  Shield, 
+  Lock, 
+  Eye, 
+  EyeOff, 
+  GitPullRequest, 
+  GitMerge, 
+  ExternalLink, 
+  X, 
+  Calendar, 
+  ChevronLeft, 
+  ChevronRight, 
+  Check, 
+  AlertTriangle, 
+  Trophy, 
+  Search, 
+  Users 
+} from "lucide-react";
 import Link from "next/link";
 import { getActiveUsers } from "@/lib/firebase";
 import Image from "next/image";
@@ -185,6 +203,25 @@ type PointsUpdate = {
   points: number;
 };
 
+// Add these types at the top with other types
+type SortOption = 'points' | 'prs' | 'mergedPrs' | 'contributions' | 'date';
+type SortDirection = 'asc' | 'desc';
+
+// Add this component to display status messages
+const StatusMessage = ({ message }: { message: { type: 'success' | 'error'; text: string } | null }) => {
+  if (!message) return null;
+  
+  return (
+    <div className={`mb-4 p-3 rounded-md ${
+      message.type === 'success' 
+        ? 'bg-green-900/20 border-green-900/30 text-green-400' 
+        : 'bg-red-900/20 border-red-900/30 text-red-400'
+    }`}>
+      {message.text}
+    </div>
+  );
+};
+
 export default function AdminPortal() {
   const { /* data: session, status */ } = useSession({
     required: true,
@@ -227,8 +264,47 @@ export default function AdminPortal() {
   const [tempPoints, setTempPoints] = useState<Record<string, number>>({});
   const [isUpdatingPoints, setIsUpdatingPoints] = useState<Record<string, boolean>>({});
 
-  // Move updateUserRank before debouncedUpdatePoints
-  const updateUserRank = async (username: string, rank: number | null, points?: number) => {
+  // Add these state variables in the AdminPortal component
+  const [sortBy, setSortBy] = useState<SortOption>('points');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  // Move fetchUsers before updateUserRank and wrap it in useCallback
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Get users
+      const users = await getActiveUsers();
+      
+      // Get manual ranks and visibility settings
+      const manualRanksRef = ref(db, 'test/manualRanks');
+      const manualRanksSnapshot = await get(manualRanksRef);
+      const manualRanks = manualRanksSnapshot.exists() ? manualRanksSnapshot.val() : {};
+      
+      // Combine user data with manual ranks and visibility
+      const updatedUsers = users
+        .filter(user => user && user.login) // Filter out invalid users
+        .map(user => ({
+          ...user,
+          stats: {
+            ...user.stats,
+            manualRank: manualRanks[user.login]?.manualRank || null,
+            hidden: manualRanks[user.login]?.hidden || false,
+            level: user.stats?.level || 'Newcomer', // Ensure level exists
+            points: user.stats?.points || 0 // Ensure points exists
+          }
+        }));
+      
+      setUsers(updatedUsers);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      setError('Failed to load users');
+    } finally {
+      setLoading(false);
+    }
+  }, [setLoading, setUsers, setError]);
+
+  // Then define updateUserRank with fetchUsers in scope
+  const updateUserRank = useCallback(async (username: string, rank: number | null, points?: number) => {
     try {
       const response = await fetch('/api/admin/update-user-rank', {
         method: 'POST',
@@ -282,55 +358,25 @@ export default function AdminPortal() {
       });
       setTimeout(() => setSettingsMessage(null), 2000);
     }
-  };
+  }, [isAuthenticated, fetchUsers, setSettingsMessage, setUsers]);
 
   // Then define debouncedUpdatePoints
   const debouncedUpdatePoints = useCallback(
-    debounce(async (update: PointsUpdate) => {
-      try {
-        setIsUpdatingPoints(prev => ({ ...prev, [update.username]: true }));
-        await updateUserRank(update.username, null, update.points);
-      } finally {
-        setIsUpdatingPoints(prev => ({ ...prev, [update.username]: false }));
-      }
-    }, 1000),
-    [updateUserRank]
+    (update: PointsUpdate) => {
+      const handler = async () => {
+        try {
+          setIsUpdatingPoints(prev => ({ ...prev, [update.username]: true }));
+          await updateUserRank(update.username, null, update.points);
+        } finally {
+          setIsUpdatingPoints(prev => ({ ...prev, [update.username]: false }));
+        }
+      };
+      
+      const debouncedHandler = debounce(handler, 1000);
+      debouncedHandler();
+    },
+    [updateUserRank, setIsUpdatingPoints]
   );
-
-  // Move fetchUsers outside useEffect and make it a function we can reuse
-  const fetchUsers = async () => {
-    setLoading(true);
-    try {
-      // Get users
-      const users = await getActiveUsers();
-      
-      // Get manual ranks and visibility settings
-      const manualRanksRef = ref(db, 'test/manualRanks');
-      const manualRanksSnapshot = await get(manualRanksRef);
-      const manualRanks = manualRanksSnapshot.exists() ? manualRanksSnapshot.val() : {};
-      
-      // Combine user data with manual ranks and visibility
-      const updatedUsers = users
-        .filter(user => user && user.login) // Filter out invalid users
-        .map(user => ({
-          ...user,
-          stats: {
-            ...user.stats,
-            manualRank: manualRanks[user.login]?.manualRank || null,
-            hidden: manualRanks[user.login]?.hidden || false,
-            level: user.stats?.level || 'Newcomer', // Ensure level exists
-            points: user.stats?.points || 0 // Ensure points exists
-          }
-        }));
-      
-      setUsers(updatedUsers);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      setError('Failed to load users');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Use fetchUsers in useEffect
   useEffect(() => {
@@ -549,346 +595,154 @@ export default function AdminPortal() {
     }
   };
 
-  // Add the renderLeaderboardManagement function
+  // Update the leaderboard management section to include a prominent search bar
   const renderLeaderboardManagement = () => {
     if (!isAuthenticated) return null;
     
-    // Calculate auto ranks once for all users
-    const usersWithAutoRank = users
-      ? [...users]
-          .sort((a, b) => (b.stats?.points || 0) - (a.stats?.points || 0))
-          .map((user, index) => ({
-            ...user,
-            autoRank: index + 1
-          }))
-      : [];
-    
     return (
-      <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-6 mb-8">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold flex items-center">
-            <Trophy className="w-5 h-5 mr-2 text-[#F778BA]" />
-            Leaderboard Management
-          </h2>
-          
-          {settingsMessage && (
-            <div className={`px-3 py-1 rounded-md text-sm flex items-center ${
-              settingsMessage.type === 'success' ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'
-            }`}>
-              {settingsMessage.type === 'success' ? 
-                <Check className="w-4 h-4 mr-1" /> : 
-                <AlertTriangle className="w-4 h-4 mr-1" />
-              }
-              {settingsMessage.text}
-            </div>
-          )}
-          </div>
-
-        {/* Manual ranks summary section */}
-        {usersWithAutoRank.length > 0 && (
-          <div className="mb-6 bg-[#0d1117] rounded-lg border border-[#30363d] p-4">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-medium">Current Manual Rankings</h3>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {usersWithAutoRank
-                .sort((a, b) => (a.autoRank || 0) - (b.autoRank || 0))
-                .map(user => (
-                  <div key={user.login} className="bg-[#161b22] border border-[#30363d] rounded-lg p-2 flex items-center">
-                    <div className="relative mr-2">
-                      <Image 
-                        src={user.avatar_url || `https://avatars.githubusercontent.com/${user.login}`}
-                        alt={user.login}
-                        width={24}
-                        height={24}
-                        className="rounded-full"
-                      />
-                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-[#F778BA] rounded-full flex items-center justify-center text-xs font-bold">
-                        {user.autoRank}
-                      </div>
-                    </div>
-                    <span className="text-xs">{user.login}</span>
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
+      <div className="bg-[#161b22] p-6 rounded-lg border border-[#30363d]">
+        <h3 className="font-medium mb-4">Current Manual Rankings</h3>
         
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Visibility Controls */}
-          <div className="lg:col-span-1">
-            <div className="bg-[#0d1117] rounded-lg border border-[#30363d] h-full">
-              <div className="p-4 border-b border-[#30363d]">
-                <h3 className="font-medium mb-2">Settings</h3>
-                <p className="text-xs text-[#8b949e]">Control leaderboard visibility and initialize settings</p>
-              </div>
-              
-              <div className="p-4">
-                <div className="flex flex-col space-y-6">
-            <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Leaderboard Visibility</span>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                          type="checkbox" 
-                          className="sr-only peer" 
-                          checked={leaderboardSettings.visible}
-                          onChange={(e) => setLeaderboardSettings(prev => ({...prev, visible: e.target.checked}))}
-                        />
-                        <div className="w-11 h-6 bg-[#21262d] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#238636]"></div>
-                      </label>
-                    </div>
-                    
-                    <div className="flex items-center text-xs text-[#8b949e] mb-4">
-                      <div className={`w-2 h-2 rounded-full mr-2 ${leaderboardSettings.visible ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                      {leaderboardSettings.visible ? 
-                        "Leaderboard is visible to all users" : 
-                        "Leaderboard is hidden from users"
-                      }
-              </div>
-            </div>
-
-                  {leaderboardSettings.lastUpdated && (
-                    <div className="text-xs text-[#8b949e] flex items-center pb-4 border-b border-[#30363d]">
-                      <Calendar className="w-3 h-3 mr-1" />
-                      Last updated: {new Date(leaderboardSettings.lastUpdated).toLocaleString()}
-              </div>
-            )}
-
-                  <div className="flex flex-col gap-3 pt-2">
-            <button
-                      onClick={saveLeaderboardSettings}
-                      disabled={isSavingSettings}
-                      className={`py-2 px-4 rounded-md transition-colors flex items-center justify-center ${
-                        isSavingSettings 
-                          ? 'bg-[#238636]/50 cursor-not-allowed' 
-                          : 'bg-[#238636] hover:bg-[#238636]/90'
-                      } text-white font-medium`}
-                    >
-                      {isSavingSettings ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
-                          Saving...
-                </>
-              ) : (
-                <>
-                          <Save className="w-4 h-4 mr-2" />
-                          Save Settings
-                </>
-              )}
-            </button>
-
-                    <button
-                      onClick={initializeLeaderboard}
-                      className="py-2 px-4 rounded-md bg-[#21262d] hover:bg-[#30363d] text-white font-medium transition-colors flex items-center justify-center"
-                    >
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                      Initialize Settings
-                    </button>
-          </div>
-        </div>
-      </div>
+        {/* Add status message display */}
+        <StatusMessage message={settingsMessage} />
+        
+        {/* Search and Filter Controls */}
+        <div className="mb-6 space-y-4">
+          {/* Search Bar */}
+          <div className="flex items-center gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8b949e]" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search users by username..."
+                className="w-full pl-10 pr-4 py-2 bg-[#0d1117] border border-[#30363d] rounded-lg text-white placeholder-[#8b949e] focus:outline-none focus:border-[#58a6ff]"
+              />
             </div>
             
-            {/* Add batch ranking tools */}
-            <div className="bg-[#0d1117] rounded-lg border border-[#30363d] mt-4">
-              <div className="p-4 border-b border-[#30363d]">
-                <h3 className="font-medium mb-2">Batch Ranking Tools</h3>
-                <p className="text-xs text-[#8b949e]">Quickly assign ranks to multiple users</p>
+            {/* Level Filter */}
+            <select
+              value={levelFilter || 'all'}
+              onChange={(e) => setLevelFilter(e.target.value === 'all' ? null : e.target.value)}
+              className="px-4 py-2 bg-[#21262d] border border-[#30363d] rounded-lg text-white min-w-[150px]"
+            >
+              <option value="all">All Levels</option>
+              <option value="Expert">Expert</option>
+              <option value="Advanced">Advanced</option>
+              <option value="Intermediate">Intermediate</option>
+              <option value="Beginner">Beginner</option>
+              <option value="Newcomer">Newcomer</option>
+            </select>
+          </div>
+
+          {/* Sort Controls */}
+          <div className="flex items-center gap-4">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="px-4 py-2 bg-[#21262d] border border-[#30363d] rounded-lg text-white flex-1"
+            >
+              <option value="points">Sort by Points</option>
+              <option value="prs">Sort by Total PRs</option>
+              <option value="mergedPrs">Sort by Merged PRs</option>
+              <option value="contributions">Sort by Contributions</option>
+              <option value="date">Sort by Last Active</option>
+            </select>
+
+            <button
+              onClick={() => setSortDirection(prev => prev === 'desc' ? 'asc' : 'desc')}
+              className="px-4 py-2 bg-[#21262d] border border-[#30363d] rounded-lg text-white hover:bg-[#30363d] min-w-[100px]"
+            >
+              {sortDirection === 'desc' ? '↓ Desc' : '↑ Asc'}
+            </button>
+          </div>
         </div>
 
-              <div className="p-4">
-                <div className="flex flex-col gap-3">
-                  <button
-                    onClick={() => assignTopRanks(10)}
-                    className="py-2 px-4 rounded-md bg-[#238636]/20 hover:bg-[#238636]/30 text-[#238636] border border-[#238636]/30 font-medium transition-colors flex items-center justify-center"
-                  >
-                    <Trophy className="w-4 h-4 mr-2" />
-                    Rank Top 10 Users
-                  </button>
-                  
-                  <button
-                    onClick={() => assignTopRanks(20)}
-                    className="py-2 px-4 rounded-md bg-[#238636]/20 hover:bg-[#238636]/30 text-[#238636] border border-[#238636]/30 font-medium transition-colors flex items-center justify-center"
-                  >
-                    <Trophy className="w-4 h-4 mr-2" />
-                    Rank Top 20 Users
-                  </button>
-                  
-                  <button
-                    onClick={clearAllManualRanks}
-                    className="py-2 px-4 rounded-md bg-[#F778BA]/20 hover:bg-[#F778BA]/30 text-[#F778BA] border border-[#F778BA]/30 font-medium transition-colors flex items-center justify-center"
-                  >
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Clear All Manual Ranks
-                  </button>
-            </div>
-          </div>
-            </div>
-          </div>
-          
-          {/* User Rankings */}
-          <div className="lg:col-span-3">
-            <div className="bg-[#0d1117] rounded-lg border border-[#30363d] h-full">
-              <div className="p-4 border-b border-[#30363d] flex justify-between items-center">
-                <div>
-                  <h3 className="font-medium mb-1">Manual User Rankings</h3>
-                  <p className="text-xs text-[#8b949e]">Assign custom ranks to override the automatic point-based ranking</p>
-            </div>
-                
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8b949e]" />
-                    <input
-                      type="text"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Search users..."
-                      className="w-full pl-10 pr-4 py-2 bg-[#0d1117] border border-[#30363d] rounded-lg text-white placeholder-[#8b949e] focus:outline-none focus:border-[#58a6ff]"
-                    />
-                  </div>
-                  <select
-                    value={levelFilter || 'all'}
-                    onChange={(e) => setLevelFilter(e.target.value === 'all' ? null : e.target.value)}
-                    className="px-4 py-2 bg-[#21262d] border border-[#30363d] rounded-lg text-white"
-                  >
-                    <option value="all">All Levels</option>
-                    <option value="Expert">Expert</option>
-                    <option value="Advanced">Advanced</option>
-                    <option value="Intermediate">Intermediate</option>
-                    <option value="Beginner">Beginner</option>
-                    <option value="Newcomer">Newcomer</option>
-                  </select>
-                </div>
-              </div>
-              
-              {/* Level-based tabs for larger screens */}
-              <div className="hidden lg:flex border-b border-[#30363d]">
-                <button
-                  onClick={() => setLevelFilter(null)}
-                  className={`px-4 py-2 text-sm font-medium ${!levelFilter ? 'border-b-2 border-[#F778BA] text-white' : 'text-[#8b949e] hover:text-white'}`}
-                >
-                  All ({usersWithAutoRank.length})
-                </button>
-                <button
-                  onClick={() => setLevelFilter('Expert')}
-                  className={`px-4 py-2 text-sm font-medium ${levelFilter === 'Expert' ? 'border-b-2 border-[#F778BA] text-white' : 'text-[#8b949e] hover:text-white'}`}
-                >
-                  Expert ({usersWithAutoRank.filter(u => u.stats?.level === 'Expert').length})
-                </button>
-                <button
-                  onClick={() => setLevelFilter('Advanced')}
-                  className={`px-4 py-2 text-sm font-medium ${levelFilter === 'Advanced' ? 'border-b-2 border-[#F778BA] text-white' : 'text-[#8b949e] hover:text-white'}`}
-                >
-                  Advanced ({usersWithAutoRank.filter(u => u.stats?.level === 'Advanced').length})
-                </button>
-                <button
-                  onClick={() => setLevelFilter('Intermediate')}
-                  className={`px-4 py-2 text-sm font-medium ${levelFilter === 'Intermediate' ? 'border-b-2 border-[#F778BA] text-white' : 'text-[#8b949e] hover:text-white'}`}
-                >
-                  Intermediate ({usersWithAutoRank.filter(u => u.stats?.level === 'Intermediate').length})
-                </button>
-                <button
-                  onClick={() => setLevelFilter('Beginner')}
-                  className={`px-4 py-2 text-sm font-medium ${levelFilter === 'Beginner' ? 'border-b-2 border-[#F778BA] text-white' : 'text-[#8b949e] hover:text-white'}`}
-                >
-                  Beginner ({usersWithAutoRank.filter(u => u.stats?.level === 'Beginner').length})
-                </button>
-                <button
-                  onClick={() => setLevelFilter('Newcomer')}
-                  className={`px-4 py-2 text-sm font-medium ${levelFilter === 'Newcomer' ? 'border-b-2 border-[#F778BA] text-white' : 'text-[#8b949e] hover:text-white'}`}
-                >
-                  Newcomer ({usersWithAutoRank.filter(u => u.stats?.level === 'Newcomer').length})
-                </button>
-        </div>
-
-              <div className="max-h-80 overflow-y-auto border border-[#30363d] rounded-lg">
-                <table className="w-full">
-                  <thead className="bg-[#161b22] sticky top-0">
-                    <tr>
-                      <th className="p-3 text-left">User</th>
-                      <th className="p-3 text-left">Points</th>
-                      <th className="p-3 text-left">Auto Rank</th>
-                      <th className="p-3 text-left">Manual Rank</th>
-                      <th className="p-3 text-left">Visibility</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filterUsers(users, searchTerm, levelFilter)
-                      .sort((a, b) => (b.stats.points || 0) - (a.stats.points || 0))
-                      .map((user, index) => (
-                        <tr key={user.login} className="border-t border-[#30363d]">
-                          <td className="p-3">
-                            <div className="flex items-center gap-2">
-                              <Image 
-                                src={user.avatar_url || `https://avatars.githubusercontent.com/${user.login}`}
-                                alt={user.login}
-                                width={24}
-                                height={24}
-                                className="rounded-full"
-                              />
-                              <span>{user.login}</span>
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="number"
-                                value={tempPoints[user.login] !== undefined ? tempPoints[user.login] : user.stats.points || 0}
-                                onChange={(e) => {
-                                  const newPoints = parseInt(e.target.value) || 0;
-                                  setTempPoints(prev => ({
-                                    ...prev,
-                                    [user.login]: newPoints
-                                  }));
-                                  debouncedUpdatePoints({ username: user.login, points: newPoints });
-                                }}
-                                className={`w-20 px-2 py-1 bg-[#0d1117] border ${
-                                  isUpdatingPoints[user.login] 
-                                    ? 'border-[#238636]' 
-                                    : 'border-[#30363d]'
-                                } rounded-md`}
-                                disabled={isUpdatingPoints[user.login]}
-                              />
-                              {isUpdatingPoints[user.login] && (
-                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-[#238636] border-t-transparent"/>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-3">{index + 1}</td>
-                          <td className="p-3">
-                            <input
-                              type="number"
-                              min="1"
-                              placeholder="Auto"
-                              value={user.stats.manualRank || ''}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                const rank = value === '' ? null : parseInt(value);
-                                updateUserRank(user.login, rank, user.stats.points);
-                              }}
-                              className="w-16 px-2 py-1 bg-[#0d1117] border border-[#30363d] rounded-md"
-                            />
-                          </td>
-                          <td className="p-3">
-                            <button
-                              onClick={() => toggleUserVisibility(user.login, !user.stats.hidden)}
-                              className={`px-3 py-1 rounded-md text-sm ${
-                                user.stats.hidden
-                                  ? 'bg-red-900/30 text-red-400 hover:bg-red-900/50'
-                                  : 'bg-green-900/30 text-green-400 hover:bg-green-900/50'
-                              }`}
-                            >
-                              {user.stats.hidden ? 'Hidden' : 'Visible'}
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+        {/* Table section */}
+        <div className="max-h-[600px] overflow-y-auto border border-[#30363d] rounded-lg">
+          <table className="w-full">
+            <thead className="bg-[#161b22] sticky top-0">
+              <tr>
+                <th className="p-3 text-left">User</th>
+                <th className="p-3 text-left">Points</th>
+                <th className="p-3 text-left">Auto Rank</th>
+                <th className="p-3 text-left">Manual Rank</th>
+                <th className="p-3 text-left">Visibility</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortUsers(filterUsers(users, searchTerm, levelFilter))
+                .map((user, index) => (
+                  <tr key={user.login} className="border-t border-[#30363d]">
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        <Image 
+                          src={user.avatar_url || `https://avatars.githubusercontent.com/${user.login}`}
+                          alt={user.login}
+                          width={24}
+                          height={24}
+                          className="rounded-full"
+                        />
+                        <span>{user.login}</span>
+                      </div>
+                    </td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={tempPoints[user.login] !== undefined ? tempPoints[user.login] : user.stats.points || 0}
+                          onChange={(e) => {
+                            const newPoints = parseInt(e.target.value) || 0;
+                            setTempPoints(prev => ({
+                              ...prev,
+                              [user.login]: newPoints
+                            }));
+                            debouncedUpdatePoints({ username: user.login, points: newPoints });
+                          }}
+                          className={`w-20 px-2 py-1 bg-[#0d1117] border ${
+                            isUpdatingPoints[user.login] 
+                              ? 'border-[#238636]' 
+                              : 'border-[#30363d]'
+                          } rounded-md`}
+                          disabled={isUpdatingPoints[user.login]}
+                        />
+                        {isUpdatingPoints[user.login] && (
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-[#238636] border-t-transparent"/>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-3">{index + 1}</td>
+                    <td className="p-3">
+                      <input
+                        type="number"
+                        min="1"
+                        placeholder="Auto"
+                        value={user.stats.manualRank || ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          const rank = value === '' ? null : parseInt(value);
+                          updateUserRank(user.login, rank, user.stats.points);
+                        }}
+                        className="w-16 px-2 py-1 bg-[#0d1117] border border-[#30363d] rounded-md"
+                      />
+                    </td>
+                    <td className="p-3">
+                      <button
+                        onClick={() => toggleUserVisibility(user.login, !user.stats.hidden)}
+                        className={`px-3 py-1 rounded-md text-sm ${
+                          user.stats.hidden
+                            ? 'bg-red-900/30 text-red-400 hover:bg-red-900/50'
+                            : 'bg-green-900/30 text-green-400 hover:bg-green-900/50'
+                        }`}
+                      >
+                        {user.stats.hidden ? 'Hidden' : 'Visible'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
         </div>
       </div>
     );
@@ -935,28 +789,6 @@ export default function AdminPortal() {
     fetchUsers();
     
     // Clear the message after a few seconds
-    setTimeout(() => setSettingsMessage(null), 3000);
-  };
-
-  // Add the assignTopRanks function to automatically assign ranks to top users
-  const assignTopRanks = (count: number) => {
-    if (!users || users.length === 0) return;
-    
-    // Sort users by points to find the top performers
-    const topUsers = [...users]
-      .sort((a, b) => (b.stats?.points || 0) - (a.stats?.points || 0))
-      .slice(0, count);
-    
-    // Assign ranks 1 through count
-    topUsers.forEach((user, index) => {
-      updateUserRank(user.login, index + 1);
-    });
-    
-    setSettingsMessage({ 
-      type: 'success', 
-      text: `Assigned ranks 1-${count} to top users by points` 
-    });
-    
     setTimeout(() => setSettingsMessage(null), 3000);
   };
 
@@ -1012,6 +844,65 @@ export default function AdminPortal() {
         
       return matchesSearch && matchesLevel;
     });
+  };
+
+  // Add this sorting function
+  const sortUsers = (users: AdminUser[]) => {
+    return [...users].sort((a, b) => {
+      const multiplier = sortDirection === 'desc' ? -1 : 1;
+      
+      switch (sortBy) {
+        case 'points':
+          return multiplier * ((b.stats?.points || 0) - (a.stats?.points || 0));
+        case 'prs':
+          return multiplier * ((b.stats?.totalPRs || 0) - (a.stats?.totalPRs || 0));
+        case 'mergedPrs':
+          return multiplier * ((b.stats?.mergedPRs || 0) - (a.stats?.mergedPRs || 0));
+        case 'contributions':
+          return multiplier * ((b.stats?.contributions || 0) - (a.stats?.contributions || 0));
+        case 'date':
+          const dateA = new Date(a.lastActive).getTime();
+          const dateB = new Date(b.lastActive).getTime();
+          return multiplier * (dateB - dateA);
+        default:
+          return 0;
+      }
+    });
+  };
+
+  // Add this button near your other admin controls
+  const assignTopRanks = async (topCount: number) => {
+    try {
+      const response = await fetch('/api/admin/assign-top-ranks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ topCount }),
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to assign top ${topCount} ranks: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("Top ranks assigned successfully:", data);
+      
+      // Refresh the user list
+      await fetchUsers();
+      
+      setSettingsMessage({ 
+        type: 'success', 
+        text: `Assigned top ${topCount} ranks successfully!` 
+      });
+    } catch (error) {
+      console.error("Error assigning top ranks:", error);
+      setSettingsMessage({ 
+        type: 'error', 
+        text: error instanceof Error ? error.message : 'Unknown error occurred' 
+      });
+    }
   };
 
   return (
@@ -1639,8 +1530,7 @@ export default function AdminPortal() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filterUsers(users, searchTerm, levelFilter)
-                      .sort((a, b) => (b.stats.points || 0) - (a.stats.points || 0))
+                    {sortUsers(filterUsers(users, searchTerm, levelFilter))
                       .map((user, index) => (
                         <tr key={user.login} className="border-t border-[#30363d]">
                           <td className="p-3">
@@ -1769,6 +1659,14 @@ export default function AdminPortal() {
           </div>
         </div>
       </Link>
+
+      {/* Add this button near your other admin controls */}
+      <button
+        onClick={() => assignTopRanks(10)} // Assign ranks to top 10 users
+        className="px-4 py-2 text-sm bg-[#30363d] hover:bg-[#21262d] text-white rounded-md transition-colors"
+      >
+        Assign Top 10 Ranks
+      </button>
     </div>
   );
 } 
